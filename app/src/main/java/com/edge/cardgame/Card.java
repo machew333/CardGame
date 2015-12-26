@@ -1,5 +1,14 @@
 package com.edge.cardgame;
 
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.graphics.Region;
+import android.util.Log;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * Created by Matt on 12/21/15.
  */
@@ -8,18 +17,28 @@ package com.edge.cardgame;
 
 
 public class Card {
+    public String TAG = "hepMe";
+
     int faceValue;
     int suitValue;
     String title = "";
     String owner;
+    String imageName="";
+
+
+    Rect postion = new Rect();
+    Region region = new Region();
 
 
 
     //Creates title from suit and card value
     public Card(int faceValue, int suitValue) {
+        this.faceValue=faceValue;
+        this.suitValue=suitValue;
 
         title+= determineFace(faceValue);
         title+=determineSuit(suitValue);
+
     }
 
 
@@ -28,15 +47,19 @@ public class Card {
 
         if (suitValue ==1) {
             suit+="Clubs";
+            imageName = "C"+imageName;
         }
         else if (suitValue==2) {
             suit+="Hearts";
+            imageName = "H"+imageName;
         }
         else if (suitValue==3) {
             suit+="Spades";
+            imageName="S" +imageName;
         }
         else if (suitValue==4) {
             suit+="Diamonds";
+            imageName = "D" +imageName;
         }
         return suit;
     }
@@ -46,42 +69,55 @@ public class Card {
 
         if (faceValue==2) {
             value+="twoOf";
+            imageName+="2";
         }
         else if (faceValue==3) {
             value+="threeOf";
+            imageName+="3";
         }
         else if (faceValue==4) {
             value+="fourOf";
+            imageName+="4";
         }
         else if (faceValue==5) {
             value+="fiveOf";
+            imageName+="5";
         }
         else if (faceValue==6) {
             value+="sixOf";
+            imageName+="6";
         }
         else if (faceValue==7) {
             value+="sevenOf";
+            imageName+="7";
         }
         else if (faceValue==8) {
             value+="eightOf";
+            imageName+="8";
         }
         else if (faceValue==9) {
             value+="nineOf";
+            imageName+="9";
         }
         else if (faceValue==10) {
             value+="tenOf";
+            imageName+="10";
         }
         else if (faceValue==11) {
             value+="jackOf";
+            imageName+="J";
         }
         else if (faceValue==12) {
             value+="queenOf";
+            imageName+="Q";
         }
         else if (faceValue==13) {
             value+="kingOf";
+            imageName+="K";
         }
         else if (faceValue==14) {
             value+="aceOf";
+            imageName+="A";
         }
 
         return value;
@@ -104,5 +140,14 @@ public class Card {
         return score;
     }
 
+    public Bitmap findBitmap(Map bitmapMap ) {
+        Bitmap cardBitmap = (Bitmap) bitmapMap.get(imageName);
+        return cardBitmap;
+    }
+
+    public void setPostion(Rect postion) {
+        this.postion = postion;
+        this.region.set(postion);
+    }
 }
 

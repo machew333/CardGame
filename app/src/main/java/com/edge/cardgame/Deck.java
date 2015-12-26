@@ -17,6 +17,13 @@ public class Deck {
     int deckCount;
     int deckNumber;
 
+    Player startPlayer;
+    public Player getStartPlayer() {
+        return startPlayer;
+    }
+
+
+
 
     ArrayList<Player> players = new ArrayList<Player>();
     int playerCount;
@@ -89,8 +96,10 @@ public class Deck {
             }
             else currentPlayer = players.get(5);
 
+            if (card.imageName.equals("C2")) {
+                startPlayer = currentPlayer;
+            }
             currentPlayer.hand.cards.add(card);
-
         }
     }
 

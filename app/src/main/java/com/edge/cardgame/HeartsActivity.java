@@ -1,28 +1,40 @@
 package com.edge.cardgame;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.Rect;
+import android.graphics.Region;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 
-public class HeartsActivity extends AppCompatActivity {
+public class HeartsActivity extends Activity {
 
     protected String TAG = "hepMe";
 
     TableView tableView;
+    public Map<String,Bitmap> bitmapMap = new HashMap<String,Bitmap>();
+
 
     Deck heartsDeck;
     LinearLayout linLay;
@@ -33,31 +45,38 @@ public class HeartsActivity extends AppCompatActivity {
     Player matt;
 
     ArrayList<Player> players = new ArrayList<Player>();
+    Queue<Player> playerQueue = new LinkedList<Player>();
 
     int playerCount;
 
     int screenHeight, screenWidth, cardWidth, cardHeight;
+    double cardOverlapFraction;
+
+    int touchedX,touchedY;
 
     Bitmap D2Bitmap, D3Bitmap, D4Bitmap, D5Bitmap, D6Bitmap, D7Bitmap, D8Bitmap, D9Bitmap, D10Bitmap, DJBitmap, DQBitmap, DKBitmap, DABitmap;
     Bitmap C2Bitmap, C3Bitmap, C4Bitmap, C5Bitmap, C6Bitmap, C7Bitmap, C8Bitmap, C9Bitmap, C10Bitmap, CJBitmap, CQBitmap, CKBitmap, CABitmap;
     Bitmap S2Bitmap, S3Bitmap, S4Bitmap, S5Bitmap, S6Bitmap, S7Bitmap, S8Bitmap, S9Bitmap, S10Bitmap, SJBitmap, SQBitmap, SKBitmap, SABitmap;
     Bitmap H2Bitmap, H3Bitmap, H4Bitmap, H5Bitmap, H6Bitmap, H7Bitmap, H8Bitmap, H9Bitmap, H10Bitmap, HJBitmap, HQBitmap, HKBitmap, HABitmap;
 
+    double fractionOfScreenWithCards = 0.65;
+    double startingPlaceOfCards = (1-fractionOfScreenWithCards)/2;
+
+    Player currentPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        configureDisplay();
-        tableView = new TableView(this);
-        setContentView(tableView);
 
         createDeck();
         createPlayers();
         heartsDeck.shuffle();
         heartsDeck.dealOutAll();
+        currentPlayer = heartsDeck.getStartPlayer();
 
+        configureDisplay();
+        tableView = new TableView(this);
+        setContentView(tableView);
     }
 
     public void createDeck() {
@@ -70,6 +89,11 @@ public class HeartsActivity extends AppCompatActivity {
         machew = new Player("machew");
         chewcifer = new Player("chewcifer");
         tooMuchDog = new Player("tooMuchDog");
+
+        playerQueue.offer(matt);
+        playerQueue.offer(machew);
+        playerQueue.offer(chewcifer);
+        playerQueue.offer(tooMuchDog);
 
         players.add(matt);
         players.add(machew);
@@ -84,6 +108,7 @@ public class HeartsActivity extends AppCompatActivity {
 
 
     class TableView extends View {
+        public Paint mBitmapPaint;
         //Clubs
         public ImageView C2IV, C3IV, C4IV, C5IV, C6IV, C7IV, C8IV, C9IV, C10IV, CJIV, CQIV, CKIV, CAIV;
         //Diamonds
@@ -94,24 +119,80 @@ public class HeartsActivity extends AppCompatActivity {
         public ImageView S2IV, S3IV, S4IV, S5IV, S6IV, S7IV, S8IV, S9IV, S10IV, SJIV, SQIV, SKIV, SAIV;
 
 
+
         public TableView(Context context) {
             super(context);
             initializeImageViews();
+
+            //I wonder what DITHER means
+            mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+
 
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            canvas.drawColor(0xFF00FFFF);
-            drawPlayerHand(canvas, machew);
+            canvas.drawColor(0xFF4CAF50); //Green
+
+
+            Log.d(TAG,"playerQueue = "+playerQueue);
+            drawPlayerHand(canvas, tooMuchDog);
         }
 
-        public void drawPlayerHand(Canvas canvas, Player currentPlayer) {
+        public boolean onTouchEvent(MotionEvent event) {
+            touchedX = (int) event.getRawX();
+            touchedY = (int) event.getRawY();
+
+            findCurrentCardClicked();
+            switch (event.getAction()) {
+
+                case MotionEvent.ACTION_DOWN: {
+                    break;
+                }
+            }
+            return true;
+        }
+
+
+
+
+        public void findCurrentCardClicked() {
+            //for(int j = currentPlayer.size() - 1; j >= 0; j--){
+                // whatever
+            //}
 
         }
 
-        //All this method does is initialize the imageviews
+
+
+
+
+
+
+        public void drawPlayerHand(Canvas canvas,Player player) {
+            Log.d(TAG,"currentPlayerName = "+player.name);
+            int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
+
+            int yCoordinate = screenHeight-cardHeight;
+            for (Card card: player.hand.cards) {
+
+                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
+
+                //Rect tempRect = new Rect(xCoordinate,yCoordinate,xCoordinate+cardWidth,yCoordinate+cardHeight);
+                //card.setPostion(tempRect);
+
+                Bitmap cardBitmap = card.findBitmap(bitmapMap);
+                canvas.drawBitmap(cardBitmap,xCoordinate,yCoordinate,mBitmapPaint);
+            }
+
+
+
+        }
+
+
+
+
         public void initializeImageViews() {
 
             C2IV = new ImageView(getApplicationContext());
@@ -340,123 +421,187 @@ public class HeartsActivity extends AppCompatActivity {
         screenWidth = size.x;
         screenHeight = size.y;
 
-        double cardRatio = 726 / 500;
 
-        cardWidth = screenWidth / 13;
+        double cardDisplayRatio = 726 / 500.0;
 
-        cardHeight = (int) (cardWidth * cardRatio);
+
+
+        double sectionOfScreenWithCards = screenWidth*fractionOfScreenWithCards;
+
+
+        //x = (6L/(n+7))    Equation for width of a card based on number of cards and size of screen being used.  w/ a 1/6 card overlap
+        cardWidth = (int) (3*sectionOfScreenWithCards)/(15);
+        //The amount the cards overlap as a fraction of the cardWidth
+        cardOverlapFraction = ((1/3.0) * cardWidth);
+
+        cardHeight = (int) (cardWidth * cardDisplayRatio);
+
+
 
         //Card Bitmaps
+        //C = clubs, D = diamonds, S =spades, H=hearts
 
         C2Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c2);
         C2Bitmap = Bitmap.createScaledBitmap(C2Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("H2",H2Bitmap);
         C3Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c3);
         C3Bitmap = Bitmap.createScaledBitmap(C3Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C3",C3Bitmap);
         C4Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c4);
         C4Bitmap = Bitmap.createScaledBitmap(C4Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C4",C4Bitmap);
         C5Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c5);
         C5Bitmap = Bitmap.createScaledBitmap(C5Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C5",C5Bitmap);
         C6Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c6);
         C6Bitmap = Bitmap.createScaledBitmap(C6Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C6",C6Bitmap);
         C7Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c7);
         C7Bitmap = Bitmap.createScaledBitmap(C7Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C7",C7Bitmap);
         C8Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c8);
         C8Bitmap = Bitmap.createScaledBitmap(C8Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C8",C8Bitmap);
         C9Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c9);
         C9Bitmap = Bitmap.createScaledBitmap(C9Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C9",C9Bitmap);
         C10Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c10);
         C10Bitmap = Bitmap.createScaledBitmap(C10Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("C10",C10Bitmap);
         CJBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.cj);
         CJBitmap = Bitmap.createScaledBitmap(CJBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("CJ",CJBitmap);
         CQBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.cq);
         CQBitmap = Bitmap.createScaledBitmap(CQBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("CQ",CQBitmap);
         CKBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ck);
         CKBitmap = Bitmap.createScaledBitmap(CKBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("CK",CKBitmap);
         CABitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ca);
         CABitmap = Bitmap.createScaledBitmap(CABitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("CA",CABitmap);
 
 
         D2Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d2);
         D2Bitmap = Bitmap.createScaledBitmap(D2Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D2",D2Bitmap);
         D3Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d3);
         D3Bitmap = Bitmap.createScaledBitmap(D3Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D3",D3Bitmap);
         D4Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d4);
         D4Bitmap = Bitmap.createScaledBitmap(D4Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D4",D4Bitmap);
         D5Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d5);
         D5Bitmap = Bitmap.createScaledBitmap(D5Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D5",D5Bitmap);
         D6Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d6);
         D6Bitmap = Bitmap.createScaledBitmap(D6Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D6",D6Bitmap);
         D7Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d7);
         D7Bitmap = Bitmap.createScaledBitmap(D7Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D7",D7Bitmap);
         D8Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d8);
         D8Bitmap = Bitmap.createScaledBitmap(D8Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D8",D8Bitmap);
         D9Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d9);
         D9Bitmap = Bitmap.createScaledBitmap(D9Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D9",D9Bitmap);
         D10Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.d10);
         D10Bitmap = Bitmap.createScaledBitmap(D10Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("D10",D10Bitmap);
         DJBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.dj);
         DJBitmap = Bitmap.createScaledBitmap(DJBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("DJ",DJBitmap);
         DQBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.dq);
         DQBitmap = Bitmap.createScaledBitmap(DQBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("DQ",DQBitmap);
         DKBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.dk);
         DKBitmap = Bitmap.createScaledBitmap(DKBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("DK",DKBitmap);
         DABitmap = BitmapFactory.decodeResource(getResources(), R.drawable.da);
         DABitmap = Bitmap.createScaledBitmap(DABitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("DA",DABitmap);
 
 
         S2Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s2);
         S2Bitmap = Bitmap.createScaledBitmap(S2Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S2",S2Bitmap);
         S3Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s3);
         S3Bitmap = Bitmap.createScaledBitmap(S3Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S3",S3Bitmap);
         S4Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s4);
         S4Bitmap = Bitmap.createScaledBitmap(S4Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S4",S4Bitmap);
         S5Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s5);
         S5Bitmap = Bitmap.createScaledBitmap(S5Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S5",S5Bitmap);
         S6Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s6);
         S6Bitmap = Bitmap.createScaledBitmap(S6Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S6",S6Bitmap);
         S7Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s7);
         S7Bitmap = Bitmap.createScaledBitmap(S7Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S7",S7Bitmap);
         S8Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s8);
         S8Bitmap = Bitmap.createScaledBitmap(S8Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S8",S8Bitmap);
         S9Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s9);
         S9Bitmap = Bitmap.createScaledBitmap(S9Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S9",S9Bitmap);
         S10Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.s10);
         S10Bitmap = Bitmap.createScaledBitmap(S10Bitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("S10",S10Bitmap);
         SJBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sj);
         SJBitmap = Bitmap.createScaledBitmap(SJBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("SJ",SJBitmap);
         SQBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sq);
         SQBitmap = Bitmap.createScaledBitmap(SQBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("SQ",SQBitmap);
         SKBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sk);
         SKBitmap = Bitmap.createScaledBitmap(SKBitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("SK",SKBitmap);
         SABitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sa);
         SABitmap = Bitmap.createScaledBitmap(SABitmap, cardWidth, cardHeight, false);
+        bitmapMap.put("SA",SABitmap);
 
         H2Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h2);
         H2Bitmap = Bitmap.createScaledBitmap(H2Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H2",H2Bitmap);
         H3Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h3);
         H3Bitmap = Bitmap.createScaledBitmap(H3Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H3",H3Bitmap);
         H4Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h4);
         H4Bitmap = Bitmap.createScaledBitmap(H4Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H4",H4Bitmap);
         H5Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h5);
         H5Bitmap = Bitmap.createScaledBitmap(H5Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H5",H5Bitmap);
         H6Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h6);
         H6Bitmap = Bitmap.createScaledBitmap(H6Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H6",H6Bitmap);
         H7Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h7);
         H7Bitmap = Bitmap.createScaledBitmap(H7Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H7",H7Bitmap);
         H8Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h8);
         H8Bitmap = Bitmap.createScaledBitmap(H8Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H8",H8Bitmap);
         H9Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h9);
         H9Bitmap = Bitmap.createScaledBitmap(H9Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H9",H9Bitmap);
         H10Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h10);
         H10Bitmap = Bitmap.createScaledBitmap(H10Bitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("H10",H10Bitmap);
         HJBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hj);
         HJBitmap = Bitmap.createScaledBitmap(HJBitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("HJ",HJBitmap);
         HQBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hq);
         HQBitmap = Bitmap.createScaledBitmap(HQBitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("HQ",HQBitmap);
         HKBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hk);
         HKBitmap = Bitmap.createScaledBitmap(HKBitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("HK",HKBitmap);
         HABitmap = BitmapFactory.decodeResource(getResources(),R.drawable.ha);
         HABitmap = Bitmap.createScaledBitmap(HABitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("HA",HABitmap);
 
 
 
