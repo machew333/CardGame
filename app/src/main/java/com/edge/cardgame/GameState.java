@@ -10,10 +10,12 @@ public class GameState {
     String playerTurn;
     ArrayList<Player> playerStates;
     HeartsTrick currentTrick;
+    int playerCount;
 
     public void setGameState(String playerTurn, ArrayList<Player> playerStates, HeartsTrick currentTrick) {
         this.playerTurn = playerTurn;
         this.playerStates = playerStates;
         this.currentTrick = currentTrick;
+        this.playerCount = playerStates.size();
     }
 }

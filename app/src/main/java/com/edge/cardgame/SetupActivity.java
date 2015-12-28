@@ -1,17 +1,18 @@
 package com.edge.cardgame;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
-import android.view.View;
+import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 
-public class SetupActivity extends Activity implements View.OnClickListener {
+public class SetupActivity extends Activity {
 
-    Button startGame;
+    Button startButton;
+    public String TAG = "hepMe";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,26 +22,30 @@ public class SetupActivity extends Activity implements View.OnClickListener {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_setup);
 
+        FragmentManager fragmentManager = getFragmentManager();
+
+        fragmentManager.beginTransaction()
+                .add(R.id.fragment_container, new SetPlayerCountFragment())
+                .commit();
+
+    }
+    public void namePlayers(int playerCount) {
+        FragmentManager fragmentManager= getFragmentManager();
+        String PNF_TAG = "playerCount";
+
+        fragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, new PlayerNameFragment(),PNF_TAG)
+                .addToBackStack(null)
+                .commit();
 
 
 
+        fragmentManager = getFragmentManager();
+        fragmentManager.executePendingTransactions();
+        PlayerNameFragment pnf = (PlayerNameFragment) fragmentManager.findFragmentByTag(PNF_TAG);
 
-        startGame =(Button) findViewById(R.id.startGameButton);
-        startGame.setOnClickListener(this);
+        pnf.populateUI(playerCount);
 
     }
 
-    public void startGame() {
-        Intent intent = new Intent(this,HeartsActivity.class);
-        startActivity(intent);
-    }
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.startGameButton:
-                Intent intent = new Intent(this,HeartsActivity.class);
-                startActivity(intent);
-        }
-    }
 }

@@ -1,0 +1,52 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="fill_parent"
+    tools:context=".SetPlayerCountFragment"
+    android:id="@+id/fragmentLayout">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Number of Players"
+        android:id="@+id/tvNumPlayers"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="3"
+        android:id="@+id/button3Players"
+        android:layout_below="@+id/tvNumPlayers"
+        android:layout_toLeftOf="@+id/tvNumPlayers"
+        android:layout_toStartOf="@+id/tvNumPlayers" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="4"
+        android:id="@+id/button4Players"
+        android:layout_below="@+id/tvNumPlayers"
+        android:layout_alignLeft="@+id/tvNumPlayers"
+        android:layout_alignStart="@+id/tvNumPlayers" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="5"
+        android:id="@+id/button5Players"
+        android:layout_below="@+id/tvNumPlayers"
+        android:layout_alignRight="@+id/tvNumPlayers"
+        android:layout_alignEnd="@+id/tvNumPlayers" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="6"
+        android:id="@+id/button6Players"
+        android:layout_below="@+id/tvNumPlayers"
+        android:layout_toRightOf="@+id/tvNumPlayers"
+        android:layout_toEndOf="@+id/tvNumPlayers" />
+</RelativeLayout>

@@ -12,6 +12,7 @@ public class Player {
     ArrayList<Card> cardsWon = new ArrayList<Card>();
     static int numberOfPlayers;
 
+
     Hand hand = new Hand(name);
 
     public Player() {
@@ -41,6 +42,11 @@ public class Player {
         }
         return totalScore;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
 
 
 }

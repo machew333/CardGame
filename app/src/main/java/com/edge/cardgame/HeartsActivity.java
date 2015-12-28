@@ -1,7 +1,9 @@
 package com.edge.cardgame;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -9,7 +11,6 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.Region;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
@@ -22,6 +23,12 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -47,7 +54,7 @@ public class HeartsActivity extends Activity {
     ArrayList<Player> players = new ArrayList<Player>();
     Queue<Player> playerQueue = new LinkedList<Player>();
 
-    int playerCount;
+    int playerCount = 0;
 
     int screenHeight, screenWidth, cardWidth, cardHeight;
     double cardOverlapFraction;
@@ -68,8 +75,12 @@ public class HeartsActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        //pickUpPlayers();
+
+
         createDeck();
-        createPlayers();
+        //createPlayers();
+        alternateCreatePlayers();
         heartsDeck.shuffle();
         heartsDeck.dealOutAll();
         currentPlayer = heartsDeck.getStartPlayer();
@@ -85,6 +96,12 @@ public class HeartsActivity extends Activity {
     }
 
     public void createPlayers() {
+        for (Player player: players) {
+            playerQueue.offer(player);
+        }
+        playerCount = players.size();
+    }
+    public void alternateCreatePlayers() {
         matt = new Player("matt");
         machew = new Player("machew");
         chewcifer = new Player("chewcifer");
@@ -102,8 +119,6 @@ public class HeartsActivity extends Activity {
 
         playerCount = players.size();
     }
-
-
 
 
 
@@ -136,8 +151,8 @@ public class HeartsActivity extends Activity {
             canvas.drawColor(0xFF4CAF50); //Green
 
 
-            Log.d(TAG,"playerQueue = "+playerQueue);
-            drawPlayerHand(canvas, tooMuchDog);
+            //Log.d(TAG,"playerQueue = "+playerQueue);
+            drawPlayerHand(canvas, players.get(0));
         }
 
         public boolean onTouchEvent(MotionEvent event) {
@@ -171,7 +186,7 @@ public class HeartsActivity extends Activity {
 
 
         public void drawPlayerHand(Canvas canvas,Player player) {
-            Log.d(TAG,"currentPlayerName = "+player.name);
+            //Log.d(TAG,"currentPlayerName = "+player.name);
             int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
 
             int yCoordinate = screenHeight-cardHeight;
@@ -414,6 +429,38 @@ public class HeartsActivity extends Activity {
         }
 
     }
+    public void pickUpPlayers() {
+        String jsonPlayers;
+
+        jsonPlayers = getIntent().getStringExtra("jsonPlayers");
+
+        Gson gson = new Gson();
+        players = gson.fromJson(jsonPlayers, new TypeToken<ArrayList<Player>>() {
+        }.getType());
+
+    }
+
+    @Override
+    public void onBackPressed() {
+        new AlertDialog.Builder(this)
+                .setTitle("WARNING")
+                .setMessage("End this game?")
+                .setIcon(R.drawable.ic_launcher)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        //do more to end this game safely
+                        finish();
+
+
+                    }
+                })
+                .setNegativeButton(android.R.string.no, null).show();
+    }
+
+
+
+
     public void configureDisplay() {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
@@ -607,4 +654,6 @@ public class HeartsActivity extends Activity {
 
 
     }
+
+
 }
