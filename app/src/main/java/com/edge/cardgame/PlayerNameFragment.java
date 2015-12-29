@@ -92,8 +92,10 @@ public class PlayerNameFragment extends Fragment implements View.OnClickListener
     }
 
     private void nameAndCreatePlayers() {
+        int ct=0;
 
         for (EditText et : editTexts)  {
+            ct++;
             String playerName;
             if (et.getText().length() ==0) {
                 playerName = (et.getHint().toString());
@@ -102,7 +104,7 @@ public class PlayerNameFragment extends Fragment implements View.OnClickListener
             else {
                 playerName =(et.getText().toString());
             }
-            players.add(new Player(playerName));
+            players.add(new Player(playerName,ct));
         }
 
 

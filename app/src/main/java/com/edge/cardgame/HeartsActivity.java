@@ -17,8 +17,6 @@ import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -26,9 +24,6 @@ import android.widget.ScrollView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -38,6 +33,8 @@ import java.util.Queue;
 public class HeartsActivity extends Activity {
 
     protected String TAG = "hepMe";
+
+    public GameState currentGameState = new GameState();
 
     TableView tableView;
     public Map<String,Bitmap> bitmapMap = new HashMap<String,Bitmap>();
@@ -58,6 +55,8 @@ public class HeartsActivity extends Activity {
 
     int screenHeight, screenWidth, cardWidth, cardHeight;
     double cardOverlapFraction;
+    public Rect placeCardRect;
+    public Region placeCardRegion = new Region();
 
     int touchedX,touchedY;
 
@@ -66,10 +65,16 @@ public class HeartsActivity extends Activity {
     Bitmap S2Bitmap, S3Bitmap, S4Bitmap, S5Bitmap, S6Bitmap, S7Bitmap, S8Bitmap, S9Bitmap, S10Bitmap, SJBitmap, SQBitmap, SKBitmap, SABitmap;
     Bitmap H2Bitmap, H3Bitmap, H4Bitmap, H5Bitmap, H6Bitmap, H7Bitmap, H8Bitmap, H9Bitmap, H10Bitmap, HJBitmap, HQBitmap, HKBitmap, HABitmap;
 
-    double fractionOfScreenWithCards = 0.65;
+    double fractionOfScreenWithCards = .95;
     double startingPlaceOfCards = (1-fractionOfScreenWithCards)/2;
 
     Player currentPlayer;
+
+    HeartsTrick currentTrick;
+    boolean heartsIsBroken = false;
+    boolean cardSelected = false;
+    Card currentCard;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,11 +88,14 @@ public class HeartsActivity extends Activity {
         alternateCreatePlayers();
         heartsDeck.shuffle();
         heartsDeck.dealOutAll();
+        //Set the owners for all the cards
+        ownCards();
         currentPlayer = heartsDeck.getStartPlayer();
 
         configureDisplay();
         tableView = new TableView(this);
         setContentView(tableView);
+        startHeartsTrick();
     }
 
     public void createDeck() {
@@ -101,11 +109,12 @@ public class HeartsActivity extends Activity {
         }
         playerCount = players.size();
     }
+
     public void alternateCreatePlayers() {
-        matt = new Player("matt");
-        machew = new Player("machew");
-        chewcifer = new Player("chewcifer");
-        tooMuchDog = new Player("tooMuchDog");
+        matt = new Player("matt",1);
+        machew = new Player("machew",2);
+        chewcifer = new Player("chewcifer",3);
+        tooMuchDog = new Player("tooMuchDog",4);
 
         playerQueue.offer(matt);
         playerQueue.offer(machew);
@@ -120,10 +129,23 @@ public class HeartsActivity extends Activity {
         playerCount = players.size();
     }
 
+    public void startHeartsTrick() {
+        currentTrick = new HeartsTrick(players);
+        if (HeartsTrick.trickCount>1) {
+            currentPlayer =currentTrick.whoGoesFirst();
+        }
+    }
+
+    public void ownCards() {
+        for (Player player: players) {
+            player.hand.ownCards();
+        }
+    }
+
 
 
     class TableView extends View {
-        public Paint mBitmapPaint;
+        public Paint cardPaint, tintPaint,placeCardPaint,highlighPaint, namePaint;
         //Clubs
         public ImageView C2IV, C3IV, C4IV, C5IV, C6IV, C7IV, C8IV, C9IV, C10IV, CJIV, CQIV, CKIV, CAIV;
         //Diamonds
@@ -133,14 +155,22 @@ public class HeartsActivity extends Activity {
         //Spades
         public ImageView S2IV, S3IV, S4IV, S5IV, S6IV, S7IV, S8IV, S9IV, S10IV, SJIV, SQIV, SKIV, SAIV;
 
-
-
         public TableView(Context context) {
             super(context);
             initializeImageViews();
 
             //I wonder what DITHER means
-            mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+            cardPaint = new Paint(Paint.DITHER_FLAG);
+            tintPaint = new Paint();
+            tintPaint.setColor(0x33000000);
+            placeCardPaint = new Paint();
+            placeCardPaint.setColor(0x992196F3);
+            highlighPaint = new Paint();
+            highlighPaint.setColor(0x33EEFF41);
+            namePaint = new Paint();
+            namePaint.setColor(0xFF000000);
+            namePaint.setTextSize(100);
+
 
 
         }
@@ -149,10 +179,14 @@ public class HeartsActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             canvas.drawColor(0xFF4CAF50); //Green
+            drawPlayerHand(canvas);
 
+            if (cardSelected) {
+                canvas.drawRect(placeCardRect, placeCardPaint);
+            }
+            drawCurrentTrick(canvas);
+            displayCurrentPlayerName(canvas);
 
-            //Log.d(TAG,"playerQueue = "+playerQueue);
-            drawPlayerHand(canvas, players.get(0));
         }
 
         public boolean onTouchEvent(MotionEvent event) {
@@ -160,52 +194,195 @@ public class HeartsActivity extends Activity {
             touchedY = (int) event.getRawY();
 
             findCurrentCardClicked();
+
             switch (event.getAction()) {
 
                 case MotionEvent.ACTION_DOWN: {
+                    findCurrentCardClicked();
                     break;
                 }
             }
             return true;
         }
 
-
-
-
         public void findCurrentCardClicked() {
-            //for(int j = currentPlayer.size() - 1; j >= 0; j--){
-                // whatever
-            //}
+
+            if (cardSelected==true && placeCardRegion.contains(touchedX,touchedY)) {
+                placeCard();
+            }
+            else {
+                cardSelected=false;
+            }
+            for (Card card: currentPlayer.hand.cards) {
+                if (card.region.contains(touchedX,touchedY) && card.isClickable) {
+                    currentCard = card;
+                    cardSelected = true;
+                }
+            }
+
+            invalidate();
+        }
+
+        public void placeCard() {
+            int index = currentPlayer.hand.cards.indexOf(currentCard);
+
+            //If index is valid yo
+            if (index !=-1){
+
+                Card cardWeWant;
+                cardWeWant = currentPlayer.hand.cards.remove(index);
+                cardWeWant.setOwner(currentPlayer.name);
+
+                currentTrick.playCard(cardWeWant);
+                cardSelected = false;
+                selectNextPlayer();
+                Log.d(TAG,"POST Selectnextplayer currentPlayer = "+currentPlayer.name);
+            }
 
         }
 
+        public void selectNextPlayer() {
+            Log.d(TAG,"trickTitle = "+currentTrick.title);
+            Log.d(TAG,"currentTrick cCount = "+currentTrick.playedCards.size());
+            Log.d(TAG,"currentPlayer = "+currentPlayer.name);
 
+            if (currentTrick.playedCards.size() >playerCount-1) {
+                currentTrick = new HeartsTrick(players);
+                currentPlayer = HeartsTrick.playerThatWonLastTrick;
+                Log.d(TAG,"Current Player name = "+currentPlayer.name);
+                return;
+            }
+            for (Player player: players) {
+                if (currentPlayer.orderNumber < playerCount) {
 
+                    if (player.orderNumber - currentPlayer.orderNumber ==1) {
+                        currentPlayer = player;
+                        return;
 
+                    }
+                }
+                else {
+                    if (player.orderNumber ==1) {
+                        currentPlayer = player;
+                        return;
+                    }
+                }
+            }
+        }
 
+        public void drawCurrentTrick(Canvas canvas) {
 
+            int xCoordinate = (int) (startingPlaceOfCards * screenWidth - cardOverlapFraction);
+            int yCoordinate = 0;
 
-        public void drawPlayerHand(Canvas canvas,Player player) {
-            //Log.d(TAG,"currentPlayerName = "+player.name);
-            int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
-
-            int yCoordinate = screenHeight-cardHeight;
-            for (Card card: player.hand.cards) {
+            for (Card card : currentTrick.playedCards) {
 
                 xCoordinate = (int) (xCoordinate + cardOverlapFraction);
 
-                //Rect tempRect = new Rect(xCoordinate,yCoordinate,xCoordinate+cardWidth,yCoordinate+cardHeight);
-                //card.setPostion(tempRect);
+                Bitmap cardBitmap = card.findBitmap(bitmapMap);
+                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
+
+            }
+        }
+
+        public void displayCurrentPlayerName(Canvas canvas) {
+            String name= currentPlayer.name;
+
+            canvas.drawText(name, 10, screenHeight/4, namePaint);
+
+        }
+
+        public void drawPlayerHand(Canvas canvas) {
+            ArrayList<Card> possibleMoves = getPossibleMoves();
+
+
+            int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
+
+            for (Card card: currentPlayer.hand.cards) {
+
+                boolean tint = true;
+                int yCoordinate = (int) (screenHeight-(cardHeight));
+
+                if (possibleMoves.contains(card)) {
+                    yCoordinate = (int) (yCoordinate-(cardHeight/4.0));
+                    tint =false;
+
+                }
+
+                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
+
+                Rect tempRect = new Rect(xCoordinate,yCoordinate,xCoordinate+cardWidth,yCoordinate+cardHeight);
+
+
 
                 Bitmap cardBitmap = card.findBitmap(bitmapMap);
-                canvas.drawBitmap(cardBitmap,xCoordinate,yCoordinate,mBitmapPaint);
+                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
+
+                if (tint) {
+                    card.setIsClickable(false);
+                    canvas.drawRect(tempRect,tintPaint);
+                }
+                else {
+                    card.setIsClickable(true);
+                    card.setPostion(tempRect);
+
+                    if (card.equals(currentCard) && cardSelected) {
+                        canvas.drawRect(tempRect,highlighPaint);
+                    }
+                }
+
+
+
+
+
             }
 
 
 
         }
 
+        public ArrayList<Card> getPossibleMoves() {
+            ArrayList<Card> possibleMoves = new ArrayList<Card>();
 
+
+            if (currentTrick.playedCards.isEmpty()) {
+
+                if (HeartsTrick.trickCount ==1) {
+
+                    for (Card card: currentPlayer.hand.cards) {
+
+                        if (card.title.equals("twoOfClubs")) {
+                            possibleMoves.add(card);
+                        }
+                    }
+                }
+                else {
+                    for (Card c: currentPlayer.hand.cards) {
+                        if (c.suitValue ==2) {
+                            if (heartsIsBroken) {
+                                possibleMoves.add(c);
+                            }
+                        }
+                        else {
+                            possibleMoves.add(c);
+                        }
+                    }
+                }
+            }
+            else {
+
+                for (Card card: currentPlayer.hand.cards) {
+                    if (card.suitValue == currentTrick.mainSuitValue ) {
+                        possibleMoves.add(card);
+                    }
+                }
+            }
+
+            if (possibleMoves.isEmpty()) {
+                possibleMoves = currentPlayer.hand.cards;
+            }
+            return possibleMoves;
+        }
 
 
         public void initializeImageViews() {
@@ -429,6 +606,9 @@ public class HeartsActivity extends Activity {
         }
 
     }
+
+
+
     public void pickUpPlayers() {
         String jsonPlayers;
 
@@ -443,7 +623,7 @@ public class HeartsActivity extends Activity {
     @Override
     public void onBackPressed() {
         new AlertDialog.Builder(this)
-                .setTitle("WARNING")
+                .setTitle("Card Game")
                 .setMessage("End this game?")
                 .setIcon(R.drawable.ic_launcher)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
@@ -468,6 +648,9 @@ public class HeartsActivity extends Activity {
         screenWidth = size.x;
         screenHeight = size.y;
 
+        int middleX = screenWidth/2;
+        int middleY= screenHeight/2;
+
 
         double cardDisplayRatio = 726 / 500.0;
 
@@ -477,11 +660,23 @@ public class HeartsActivity extends Activity {
 
 
         //x = (6L/(n+7))    Equation for width of a card based on number of cards and size of screen being used.  w/ a 1/6 card overlap
+
         cardWidth = (int) (3*sectionOfScreenWithCards)/(15);
         //The amount the cards overlap as a fraction of the cardWidth
         cardOverlapFraction = ((1/3.0) * cardWidth);
 
         cardHeight = (int) (cardWidth * cardDisplayRatio);
+        int halfCardWidth = cardWidth/2;
+        int halfCardHeight = cardHeight/2;
+
+
+        placeCardRect = new Rect(middleX-halfCardWidth,
+                middleY-halfCardHeight,
+                middleX+halfCardWidth,
+                middleY+halfCardHeight);
+
+
+        placeCardRegion.set(placeCardRect);
 
 
 
@@ -490,7 +685,7 @@ public class HeartsActivity extends Activity {
 
         C2Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c2);
         C2Bitmap = Bitmap.createScaledBitmap(C2Bitmap, cardWidth, cardHeight, false);
-        bitmapMap.put("H2",H2Bitmap);
+        bitmapMap.put("C2",C2Bitmap);
         C3Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.c3);
         C3Bitmap = Bitmap.createScaledBitmap(C3Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("C3",C3Bitmap);

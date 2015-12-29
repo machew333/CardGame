@@ -7,15 +7,24 @@ import java.util.ArrayList;
  */
 public class GameState {
 
+    String title;
     String playerTurn;
     ArrayList<Player> playerStates;
     HeartsTrick currentTrick;
     int playerCount;
+    int tricksPlayed;
 
-    public void setGameState(String playerTurn, ArrayList<Player> playerStates, HeartsTrick currentTrick) {
+    public GameState() {
+        tricksPlayed=0;
+    }
+
+    public void setGameState(String title,String playerTurn, ArrayList<Player> playerStates, HeartsTrick currentTrick,int tricksPlayed) {
+        this.title = title;
         this.playerTurn = playerTurn;
         this.playerStates = playerStates;
         this.currentTrick = currentTrick;
         this.playerCount = playerStates.size();
+        this.tricksPlayed = tricksPlayed;
     }
+
 }

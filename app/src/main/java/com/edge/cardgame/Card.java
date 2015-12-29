@@ -28,8 +28,11 @@ public class Card {
 
     Rect postion = new Rect();
     Region region = new Region();
+    boolean isClickable;
 
-
+    public void setIsClickable(boolean isClickable) {
+        this.isClickable = isClickable;
+    }
 
     //Creates title from suit and card value
     public Card(int faceValue, int suitValue) {

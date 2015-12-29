@@ -1,29 +1,64 @@
 package com.edge.cardgame;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 
 /**
  * Created by Matt on 12/21/15.
  */
 public class HeartsTrick {
+    String TAG = "hepMe";
 
     ArrayList<Card> playedCards = new ArrayList<Card>();
     ArrayList<Player> players = new ArrayList<Player>();
+
+    static Player playerThatWonLastTrick;
 
     int numberOfPlayers;
 
     int mainSuitValue;
 
+    static int trickCount=0;
+
+    String title;
+
 
     public HeartsTrick(ArrayList<Player> players) {
         this.players = players;
         this.numberOfPlayers = players.size();
+        trickCount++;
+        this.title = "Trick"+trickCount;
+    }
+
+    public Player whoGoesFirst() {
+        Log.d(TAG,"playerThatWonLastTrick = "+playerThatWonLastTrick.name);
+        if (!playerThatWonLastTrick.equals(null)) {
+            return findPlayerWithTwoOfClubs();
+        }
+        else {
+            Log.d(TAG,"Inside loop: layerThatWonLastTrick = "+playerThatWonLastTrick.name);
+            return playerThatWonLastTrick;
+
+        }
+    }
+
+    public Player findPlayerWithTwoOfClubs() {
+        for (Player player: players) {
+            for (Card card: player.hand.cards) {
+                if (card.title.matches("twoOfClubs")) {
+                    return player;
+                }
+            }
+        }
+        return null;
     }
 
 
 
     public void playCard(Card card) {
         if (playedCards.size() ==0) {
+
             mainSuitValue = card.suitValue;
         }
 
@@ -35,19 +70,30 @@ public class HeartsTrick {
     }
 
     private void endTrick() {
+        Log.d(TAG,"huh?");
+
+
 
         Card winningCard = findHighestCard();
         findOwnerAndStickItToThem(winningCard);
 
 
+
+
+
     }
 
-
     private Card findHighestCard() {
-        Card highest = playedCards.remove(0);
+        ArrayList<Card> copyCards = new ArrayList<Card>();
+        //Had to copy playedCards this way so it was not overwritten. Otherwise all cards would be removed from it :(
+        for (Card card: playedCards) {
+            copyCards.add(card);
+        }
 
-        while (playedCards.size()>0) {
-            Card test = playedCards.remove(0);
+        Card highest = copyCards.remove(0);
+
+        while (copyCards.size()>0) {
+            Card test = copyCards.remove(0);
             highest = isHigher(test,highest);
         }
         return highest;
@@ -68,9 +114,13 @@ public class HeartsTrick {
     }
 
     private void findOwnerAndStickItToThem(Card winningCard) {
+        Log.d(TAG,"winningCard owner = "+winningCard.owner + "  title   == "+winningCard.title);
+
         for (Player p: players) {
             if (p.name == winningCard.owner) {
                 p.giveCards(playedCards);
+                playerThatWonLastTrick=p;
+                Log.d(TAG,"playerThatWonLastTrick = === "+playerThatWonLastTrick);
             }
         }
     }

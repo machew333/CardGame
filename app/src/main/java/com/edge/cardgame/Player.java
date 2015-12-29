@@ -11,6 +11,7 @@ public class Player {
     int totalScore=0;
     ArrayList<Card> cardsWon = new ArrayList<Card>();
     static int numberOfPlayers;
+    int orderNumber;
 
 
     Hand hand = new Hand(name);
@@ -22,6 +23,12 @@ public class Player {
     }
     public Player(String name) {
         this.name = name;
+        hand.ownCards();
+        numberOfPlayers++;
+    }
+    public Player(String name, int orderNumber) {
+        this.name = name;
+        this.orderNumber=orderNumber;
         hand.ownCards();
         numberOfPlayers++;
     }
@@ -46,7 +53,9 @@ public class Player {
     public void setName(String name) {
         this.name = name;
     }
-
+    public void setOrderNumber(int orderNumber) {
+        this.orderNumber = orderNumber;
+    }
 
 
 }
