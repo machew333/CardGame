@@ -152,5 +152,17 @@ public class Card {
         this.postion = postion;
         this.region.set(postion);
     }
+
+    public int getScore() {
+        if (this.suitValue ==2) {
+            return 1;
+        }
+        else if (this.suitValue==3 && this.faceValue==12) {
+            return 13;
+        }
+        else {
+            return 0;
+        }
+    }
 }
 

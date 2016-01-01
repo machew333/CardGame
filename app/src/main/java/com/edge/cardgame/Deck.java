@@ -68,6 +68,7 @@ public class Deck {
         playerCount = players.size();
         //In case you are playing with an odd number. You don't want people to have leftover cards. This takes out low diamonds.
 
+
         while (cards.size() <40 && cards.size() %playerCount !=0) {
             cards.remove(40);
         }
@@ -77,6 +78,7 @@ public class Deck {
         //Run through all cards and deal out
         for (Card card: cards) {
             count++;
+
             int personNumber = (count%playerCount);
 
             if (personNumber == 0) {
@@ -99,7 +101,7 @@ public class Deck {
             if (card.imageName.equals("C2")) {
                 startPlayer = currentPlayer;
             }
-            currentPlayer.hand.cards.add(card);
+            currentPlayer.hand.add(card);
         }
     }
 

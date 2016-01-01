@@ -16,19 +16,14 @@ import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 public class HeartsActivity extends Activity {
 
@@ -42,18 +37,20 @@ public class HeartsActivity extends Activity {
 
     Deck heartsDeck;
     LinearLayout linLay;
-    ScrollView scrollView;
-    Player machew;
-    Player tooMuchDog;
-    Player chewcifer;
+    Player john;
+    Player elroy;
+    Player jeff;
     Player matt;
 
     ArrayList<Player> players = new ArrayList<Player>();
-    Queue<Player> playerQueue = new LinkedList<Player>();
+    PlayerQueue playerQueue = new PlayerQueue(players);
 
     int playerCount = 0;
 
     int screenHeight, screenWidth, cardWidth, cardHeight;
+    int middleX, middleY;
+    int halfCardWidth,halfCardHeight;
+    int textSize;
     double cardOverlapFraction;
     public Rect placeCardRect;
     public Region placeCardRegion = new Region();
@@ -64,6 +61,7 @@ public class HeartsActivity extends Activity {
     Bitmap C2Bitmap, C3Bitmap, C4Bitmap, C5Bitmap, C6Bitmap, C7Bitmap, C8Bitmap, C9Bitmap, C10Bitmap, CJBitmap, CQBitmap, CKBitmap, CABitmap;
     Bitmap S2Bitmap, S3Bitmap, S4Bitmap, S5Bitmap, S6Bitmap, S7Bitmap, S8Bitmap, S9Bitmap, S10Bitmap, SJBitmap, SQBitmap, SKBitmap, SABitmap;
     Bitmap H2Bitmap, H3Bitmap, H4Bitmap, H5Bitmap, H6Bitmap, H7Bitmap, H8Bitmap, H9Bitmap, H10Bitmap, HJBitmap, HQBitmap, HKBitmap, HABitmap;
+    Bitmap cardBackBitmap;
 
     double fractionOfScreenWithCards = .95;
     double startingPlaceOfCards = (1-fractionOfScreenWithCards)/2;
@@ -73,29 +71,26 @@ public class HeartsActivity extends Activity {
     HeartsTrick currentTrick;
     boolean heartsIsBroken = false;
     boolean cardSelected = false;
+    boolean deckIsFinished = false;
     Card currentCard;
 
+    public Rect otPlayer1Rect,otPlayer2Rect,otPlayer3Rect, otPlayer4Rect, otPlayer5Rect;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //pickUpPlayers();
 
 
-        createDeck();
-        //createPlayers();
-        alternateCreatePlayers();
-        heartsDeck.shuffle();
-        heartsDeck.dealOutAll();
-        //Set the owners for all the cards
-        ownCards();
-        currentPlayer = heartsDeck.getStartPlayer();
+        pickUpPlayers();
+        //alternatePickUpPlayers();
+
+
+        initializeNewDeck();
 
         configureDisplay();
         tableView = new TableView(this);
         setContentView(tableView);
-        startHeartsTrick();
     }
 
     public void createDeck() {
@@ -103,33 +98,51 @@ public class HeartsActivity extends Activity {
         heartsDeck.setPlayers(players);
     }
 
-    public void createPlayers() {
-        for (Player player: players) {
-            playerQueue.offer(player);
+    public void initializeNewDeck() {
+        createDeck();
+        heartsDeck.shuffle();
+        heartsDeck.dealOutAll();
+        ownCards();
+        currentPlayer = heartsDeck.getStartPlayer();
+        deckIsFinished =false;
+        HeartsTrick.resetTrickCount();
+        startNewHeartsTrick();
+
+    }
+
+    public void pickUpPlayers() {
+        //Sent from setup activity
+        String jsonPlayers;
+
+        jsonPlayers = getIntent().getStringExtra("jsonPlayers");
+
+        Gson gson = new Gson();
+        ArrayList<Player> tempPlayers = gson.fromJson(jsonPlayers, new TypeToken<ArrayList<Player>>() {
+        }.getType());
+
+        //I had to instantiate it this way for some reason.
+
+        for (Player player: tempPlayers) {
+            players.add(player);
         }
         playerCount = players.size();
     }
 
-    public void alternateCreatePlayers() {
+    public void alternatePickUpPlayers() {
         matt = new Player("matt",1);
-        machew = new Player("machew",2);
-        chewcifer = new Player("chewcifer",3);
-        tooMuchDog = new Player("tooMuchDog",4);
-
-        playerQueue.offer(matt);
-        playerQueue.offer(machew);
-        playerQueue.offer(chewcifer);
-        playerQueue.offer(tooMuchDog);
+        john = new Player("john",2);
+        jeff = new Player("jeff",3);
+        elroy = new Player("elroy",4);
 
         players.add(matt);
-        players.add(machew);
-        players.add(chewcifer);
-        players.add(tooMuchDog);
+        players.add(john);
+        players.add(jeff);
+        players.add(elroy);
 
         playerCount = players.size();
     }
 
-    public void startHeartsTrick() {
+    public void startNewHeartsTrick() {
         currentTrick = new HeartsTrick(players);
         if (HeartsTrick.trickCount>1) {
             currentPlayer =currentTrick.whoGoesFirst();
@@ -138,28 +151,28 @@ public class HeartsActivity extends Activity {
 
     public void ownCards() {
         for (Player player: players) {
-            player.hand.ownCards();
+            //player.ownHand();
         }
+    }
+
+    public void displayDialog() {
+
+
     }
 
 
 
     class TableView extends View {
-        public Paint cardPaint, tintPaint,placeCardPaint,highlighPaint, namePaint;
-        //Clubs
-        public ImageView C2IV, C3IV, C4IV, C5IV, C6IV, C7IV, C8IV, C9IV, C10IV, CJIV, CQIV, CKIV, CAIV;
-        //Diamonds
-        public ImageView D2IV, D3IV, D4IV, D5IV, D6IV, D7IV, D8IV, D9IV, D10IV, DJIV, DQIV, DKIV, DAIV;
-        //Hearts
-        public ImageView H2IV, H3IV, H4IV, H5IV, H6IV, H7IV, H8IV, H9IV, H10IV, HJIV, HQIV, HKIV, HAIV;
-        //Spades
-        public ImageView S2IV, S3IV, S4IV, S5IV, S6IV, S7IV, S8IV, S9IV, S10IV, SJIV, SQIV, SKIV, SAIV;
+        public Paint cardPaint, tintPaint,placeCardPaint,highlighPaint, textPaint;
+
+        public int trickIsOver = 0;
+
+
 
         public TableView(Context context) {
             super(context);
-            initializeImageViews();
 
-            //I wonder what DITHER means
+
             cardPaint = new Paint(Paint.DITHER_FLAG);
             tintPaint = new Paint();
             tintPaint.setColor(0x33000000);
@@ -167,10 +180,9 @@ public class HeartsActivity extends Activity {
             placeCardPaint.setColor(0x992196F3);
             highlighPaint = new Paint();
             highlighPaint.setColor(0x33EEFF41);
-            namePaint = new Paint();
-            namePaint.setColor(0xFF000000);
-            namePaint.setTextSize(100);
-
+            textPaint = new Paint();
+            textPaint.setColor(0xFF000000);
+            textPaint.setTextSize(textSize);
 
 
         }
@@ -179,15 +191,59 @@ public class HeartsActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             canvas.drawColor(0xFF4CAF50); //Green
+
+            if (deckIsFinished) {
+                drawDeckIsFinished(canvas);
+            }
+
+            else if (trickIsOver>0) {
+                drawTrickIsOver(canvas);
+            }
+            else {
+                drawNormalGameplay(canvas);
+            }
+        }
+
+        public void drawDeckIsFinished(Canvas canvas)  {
+            canvas.drawColor(0xFF4CAF50); //Green
+            drawPlayerScores(canvas);
+            displayDialog();
+            delayDisplay(1000);
+        }
+
+        public void drawTrickIsOver(Canvas canvas) {
             drawPlayerHand(canvas);
+            drawCurrentTrick(canvas);
+            displayTrickWinner(canvas);
+            if (trickIsOver ==1) {
+
+                startNewHeartsTrick();
+
+                delayDisplay(1000);
+                trickIsOver--;
+            }
+            trickIsOver--;
+            invalidate();
+        }
+
+        public void drawNormalGameplay(Canvas canvas) {
+            canvas.drawColor(0xFF4CAF50); //Green
+            drawCurrentTrick(canvas);
+            drawPlayerHand(canvas);
+            displayCurrentPlayerName(canvas);
+            drawOtherPlayerHands(canvas);
+
 
             if (cardSelected) {
                 canvas.drawRect(placeCardRect, placeCardPaint);
             }
-            drawCurrentTrick(canvas);
-            displayCurrentPlayerName(canvas);
 
         }
+
+
+
+
+
 
         public boolean onTouchEvent(MotionEvent event) {
             touchedX = (int) event.getRawX();
@@ -199,6 +255,11 @@ public class HeartsActivity extends Activity {
 
                 case MotionEvent.ACTION_DOWN: {
                     findCurrentCardClicked();
+                    if (deckIsFinished) {
+                        initializeNewDeck();
+                        Log.d(TAG, "Name = " + currentPlayer.name + " hand = " + currentPlayer.hand);
+                    }
+
                     break;
                 }
             }
@@ -213,7 +274,7 @@ public class HeartsActivity extends Activity {
             else {
                 cardSelected=false;
             }
-            for (Card card: currentPlayer.hand.cards) {
+            for (Card card: currentPlayer.hand) {
                 if (card.region.contains(touchedX,touchedY) && card.isClickable) {
                     currentCard = card;
                     cardSelected = true;
@@ -224,56 +285,40 @@ public class HeartsActivity extends Activity {
         }
 
         public void placeCard() {
-            int index = currentPlayer.hand.cards.indexOf(currentCard);
+            int index = currentPlayer.hand.indexOf(currentCard);
 
-            //If index is valid yo
+            //Sometimes I was getting invalid index because the user clicks for longer than a few milliseconds.
             if (index !=-1){
 
                 Card cardWeWant;
-                cardWeWant = currentPlayer.hand.cards.remove(index);
+                cardWeWant = currentPlayer.hand.remove(index);
                 cardWeWant.setOwner(currentPlayer.name);
+                if (cardWeWant.suitValue ==2) {
+                    heartsIsBroken = true;
+                }
 
                 currentTrick.playCard(cardWeWant);
                 cardSelected = false;
-                selectNextPlayer();
-                Log.d(TAG,"POST Selectnextplayer currentPlayer = "+currentPlayer.name);
+                if (currentTrick.playedCards.size() >playerCount-1) {
+                    trickIsOver=2;
+                }
+                else {
+                    selectNextPlayer();
+                }
+
             }
 
         }
 
         public void selectNextPlayer() {
-            Log.d(TAG,"trickTitle = "+currentTrick.title);
-            Log.d(TAG,"currentTrick cCount = "+currentTrick.playedCards.size());
-            Log.d(TAG,"currentPlayer = "+currentPlayer.name);
-
-            if (currentTrick.playedCards.size() >playerCount-1) {
-                currentTrick = new HeartsTrick(players);
-                currentPlayer = HeartsTrick.playerThatWonLastTrick;
-                Log.d(TAG,"Current Player name = "+currentPlayer.name);
-                return;
-            }
-            for (Player player: players) {
-                if (currentPlayer.orderNumber < playerCount) {
-
-                    if (player.orderNumber - currentPlayer.orderNumber ==1) {
-                        currentPlayer = player;
-                        return;
-
-                    }
-                }
-                else {
-                    if (player.orderNumber ==1) {
-                        currentPlayer = player;
-                        return;
-                    }
-                }
-            }
+            currentPlayer = playerQueue.getNextPlayer(currentPlayer);
         }
+
 
         public void drawCurrentTrick(Canvas canvas) {
 
-            int xCoordinate = (int) (startingPlaceOfCards * screenWidth - cardOverlapFraction);
-            int yCoordinate = 0;
+            int xCoordinate = (int) (middleX - ((playerCount)*cardOverlapFraction));
+            int yCoordinate = middleY- halfCardHeight;
 
             for (Card card : currentTrick.playedCards) {
 
@@ -288,8 +333,22 @@ public class HeartsActivity extends Activity {
         public void displayCurrentPlayerName(Canvas canvas) {
             String name= currentPlayer.name;
 
-            canvas.drawText(name, 10, screenHeight/4, namePaint);
+            canvas.drawText(name, 10, screenHeight/4, textPaint);
 
+        }
+
+        public void displayTrickWinner(Canvas canvas) {
+            String winner = HeartsTrick.playerThatWonLastTrick.name;
+            canvas.drawText(winner + " wins the trick",10,middleY-cardHeight, textPaint);
+
+        }
+
+        public void delayDisplay(int delayTime) {
+            try {
+                Thread.sleep(delayTime);
+            } catch(InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         public void drawPlayerHand(Canvas canvas) {
@@ -298,7 +357,7 @@ public class HeartsActivity extends Activity {
 
             int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
 
-            for (Card card: currentPlayer.hand.cards) {
+            for (Card card: currentPlayer.hand) {
 
                 boolean tint = true;
                 int yCoordinate = (int) (screenHeight-(cardHeight));
@@ -341,6 +400,37 @@ public class HeartsActivity extends Activity {
 
         }
 
+        public void drawOtherPlayerHands(Canvas canvas) {
+
+            findWhereOtherPlayersAreSitting();
+
+            canvas.drawBitmap(cardBackBitmap, otPlayer1Rect.left, otPlayer1Rect.top, cardPaint);
+
+            if (playerCount>2) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer2Rect.left,otPlayer2Rect.top,cardPaint);
+            }
+            if (playerCount>3) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer3Rect.left,otPlayer3Rect.top,cardPaint);
+            }
+            if (playerCount>4) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer4Rect.left,otPlayer4Rect.top,cardPaint);
+            }
+            if (playerCount>5) {
+                canvas.drawBitmap(cardBackBitmap, otPlayer5Rect.left, otPlayer5Rect.top, cardPaint);
+            }
+
+
+        }
+
+        public void findWhereOtherPlayersAreSitting() {
+
+
+            ArrayList<Player> tempPlayers = playerQueue.reorderQueue(currentPlayer);
+
+            players = (ArrayList<Player>) tempPlayers.clone();
+
+        }
+
         public ArrayList<Card> getPossibleMoves() {
             ArrayList<Card> possibleMoves = new ArrayList<Card>();
 
@@ -349,15 +439,22 @@ public class HeartsActivity extends Activity {
 
                 if (HeartsTrick.trickCount ==1) {
 
-                    for (Card card: currentPlayer.hand.cards) {
+                    for (Card card: currentPlayer.hand) {
 
                         if (card.title.equals("twoOfClubs")) {
+                            possibleMoves.clear();
+                            possibleMoves.add(card);
+                            break;
+                        }
+                        //Can't play value cards
+                        if (card.getScore() ==0) {
                             possibleMoves.add(card);
                         }
                     }
+
                 }
                 else {
-                    for (Card c: currentPlayer.hand.cards) {
+                    for (Card c: currentPlayer.hand) {
                         if (c.suitValue ==2) {
                             if (heartsIsBroken) {
                                 possibleMoves.add(c);
@@ -371,7 +468,7 @@ public class HeartsActivity extends Activity {
             }
             else {
 
-                for (Card card: currentPlayer.hand.cards) {
+                for (Card card: currentPlayer.hand) {
                     if (card.suitValue == currentTrick.mainSuitValue ) {
                         possibleMoves.add(card);
                     }
@@ -379,246 +476,72 @@ public class HeartsActivity extends Activity {
             }
 
             if (possibleMoves.isEmpty()) {
-                possibleMoves = currentPlayer.hand.cards;
+                possibleMoves = currentPlayer.hand;
             }
             return possibleMoves;
         }
 
 
-        public void initializeImageViews() {
-
-            C2IV = new ImageView(getApplicationContext());
-            C2IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C2IV.setScaleType(ImageView.ScaleType.CENTER);
-            C2IV.setImageBitmap(C2Bitmap);
-            C3IV = new ImageView(getApplicationContext());
-            C3IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C3IV.setScaleType(ImageView.ScaleType.CENTER);
-            C3IV.setImageBitmap(C3Bitmap);
-            C4IV = new ImageView(getApplicationContext());
-            C4IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C4IV.setScaleType(ImageView.ScaleType.CENTER);
-            C4IV.setImageBitmap(C4Bitmap);
-            C5IV = new ImageView(getApplicationContext());
-            C5IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C5IV.setScaleType(ImageView.ScaleType.CENTER);
-            C5IV.setImageBitmap(C5Bitmap);
-            C6IV = new ImageView(getApplicationContext());
-            C6IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C6IV.setScaleType(ImageView.ScaleType.CENTER);
-            C6IV.setImageBitmap(C6Bitmap);
-            C7IV = new ImageView(getApplicationContext());
-            C7IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C7IV.setScaleType(ImageView.ScaleType.CENTER);
-            C7IV.setImageBitmap(C7Bitmap);
-            C8IV = new ImageView(getApplicationContext());
-            C8IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C8IV.setScaleType(ImageView.ScaleType.CENTER);
-            C8IV.setImageBitmap(C8Bitmap);
-            C9IV = new ImageView(getApplicationContext());
-            C9IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C9IV.setScaleType(ImageView.ScaleType.CENTER);
-            C9IV.setImageBitmap(C9Bitmap);
-            C10IV = new ImageView(getApplicationContext());
-            C10IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            C10IV.setScaleType(ImageView.ScaleType.CENTER);
-            C10IV.setImageBitmap(C10Bitmap);
-            CJIV = new ImageView(getApplicationContext());
-            CJIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            CJIV.setScaleType(ImageView.ScaleType.CENTER);
-            CJIV.setImageBitmap(CJBitmap);
-            CQIV = new ImageView(getApplicationContext());
-            CQIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            CQIV.setScaleType(ImageView.ScaleType.CENTER);
-            CQIV.setImageBitmap(CQBitmap);
-            CKIV = new ImageView(getApplicationContext());
-            CKIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            CKIV.setScaleType(ImageView.ScaleType.CENTER);
-            CKIV.setImageBitmap(CKBitmap);
-            CAIV = new ImageView(getApplicationContext());
-            CAIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            CAIV.setScaleType(ImageView.ScaleType.CENTER);
-            CAIV.setImageBitmap(CABitmap);
+        public void drawPlayerScores(Canvas canvas) {
+            int xCoordinate = 10;
+            int yCoordinate =10;
+            int lowerYCoordinate = middleY;
+            for (Player player: players) {
+                player.getRoundScore();
 
 
-            D2IV = new ImageView(getApplicationContext());
-            D2IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D2IV.setScaleType(ImageView.ScaleType.CENTER);
-            D2IV.setImageBitmap(C2Bitmap);
-            D3IV = new ImageView(getApplicationContext());
-            D3IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D3IV.setScaleType(ImageView.ScaleType.CENTER);
-            D3IV.setImageBitmap(C3Bitmap);
-            D4IV = new ImageView(getApplicationContext());
-            D4IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D4IV.setScaleType(ImageView.ScaleType.CENTER);
-            D4IV.setImageBitmap(C4Bitmap);
-            D5IV = new ImageView(getApplicationContext());
-            D5IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D5IV.setScaleType(ImageView.ScaleType.CENTER);
-            D5IV.setImageBitmap(C5Bitmap);
-            D6IV = new ImageView(getApplicationContext());
-            D6IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D6IV.setScaleType(ImageView.ScaleType.CENTER);
-            D6IV.setImageBitmap(C6Bitmap);
-            D7IV = new ImageView(getApplicationContext());
-            D7IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D7IV.setScaleType(ImageView.ScaleType.CENTER);
-            D7IV.setImageBitmap(C7Bitmap);
-            D8IV = new ImageView(getApplicationContext());
-            D8IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D8IV.setScaleType(ImageView.ScaleType.CENTER);
-            D8IV.setImageBitmap(C8Bitmap);
-            D9IV = new ImageView(getApplicationContext());
-            D9IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D9IV.setScaleType(ImageView.ScaleType.CENTER);
-            D9IV.setImageBitmap(C9Bitmap);
-            D10IV = new ImageView(getApplicationContext());
-            D10IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            D10IV.setScaleType(ImageView.ScaleType.CENTER);
-            D10IV.setImageBitmap(C10Bitmap);
-            DJIV = new ImageView(getApplicationContext());
-            DJIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            DJIV.setScaleType(ImageView.ScaleType.CENTER);
-            DJIV.setImageBitmap(CJBitmap);
-            DQIV = new ImageView(getApplicationContext());
-            DQIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            DQIV.setScaleType(ImageView.ScaleType.CENTER);
-            DQIV.setImageBitmap(CQBitmap);
-            DKIV = new ImageView(getApplicationContext());
-            DKIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            DKIV.setScaleType(ImageView.ScaleType.CENTER);
-            DKIV.setImageBitmap(CKBitmap);
-            DAIV = new ImageView(getApplicationContext());
-            DAIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            DAIV.setScaleType(ImageView.ScaleType.CENTER);
-            DAIV.setImageBitmap(CABitmap);
+                yCoordinate+=textSize;
+                lowerYCoordinate +=textSize;
 
+                canvas.drawText(player.name+ " score == "+player.roundScore,xCoordinate,yCoordinate, textPaint);
+                player.addRoundToTotalScore();
+                canvas.drawText(player.name + " total score = " + player.totalScore, xCoordinate,lowerYCoordinate, textPaint);
 
-            S2IV = new ImageView(getApplicationContext());
-            S2IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S2IV.setScaleType(ImageView.ScaleType.CENTER);
-            S2IV.setImageBitmap(C2Bitmap);
-            S3IV = new ImageView(getApplicationContext());
-            S3IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S3IV.setScaleType(ImageView.ScaleType.CENTER);
-            S3IV.setImageBitmap(C3Bitmap);
-            S4IV = new ImageView(getApplicationContext());
-            S4IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S4IV.setScaleType(ImageView.ScaleType.CENTER);
-            S4IV.setImageBitmap(C4Bitmap);
-            S5IV = new ImageView(getApplicationContext());
-            S5IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S5IV.setScaleType(ImageView.ScaleType.CENTER);
-            S5IV.setImageBitmap(C5Bitmap);
-            S6IV = new ImageView(getApplicationContext());
-            S6IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S6IV.setScaleType(ImageView.ScaleType.CENTER);
-            S6IV.setImageBitmap(C6Bitmap);
-            S7IV = new ImageView(getApplicationContext());
-            S7IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S7IV.setScaleType(ImageView.ScaleType.CENTER);
-            S7IV.setImageBitmap(C7Bitmap);
-            S8IV = new ImageView(getApplicationContext());
-            S8IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S8IV.setScaleType(ImageView.ScaleType.CENTER);
-            S8IV.setImageBitmap(C8Bitmap);
-            S9IV = new ImageView(getApplicationContext());
-            S9IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S9IV.setScaleType(ImageView.ScaleType.CENTER);
-            S9IV.setImageBitmap(C9Bitmap);
-            S10IV = new ImageView(getApplicationContext());
-            S10IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            S10IV.setScaleType(ImageView.ScaleType.CENTER);
-            S10IV.setImageBitmap(C10Bitmap);
-            SJIV = new ImageView(getApplicationContext());
-            SJIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            SJIV.setScaleType(ImageView.ScaleType.CENTER);
-            SJIV.setImageBitmap(CJBitmap);
-            SQIV = new ImageView(getApplicationContext());
-            SQIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            SQIV.setScaleType(ImageView.ScaleType.CENTER);
-            SQIV.setImageBitmap(CQBitmap);
-            SKIV = new ImageView(getApplicationContext());
-            SKIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            SKIV.setScaleType(ImageView.ScaleType.CENTER);
-            SKIV.setImageBitmap(CKBitmap);
-            SAIV = new ImageView(getApplicationContext());
-            SAIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            SAIV.setScaleType(ImageView.ScaleType.CENTER);
-            SAIV.setImageBitmap(CABitmap);
+                if (player.totalScore >=100) {
+                    //endGame();
+                }
+            }
+            canvas.drawText("Tap to continue",xCoordinate,screenHeight-cardHeight, textPaint);
 
-
-            H2IV = new ImageView(getApplicationContext());
-            H2IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H2IV.setScaleType(ImageView.ScaleType.CENTER);
-            H2IV.setImageBitmap(C2Bitmap);
-            H3IV = new ImageView(getApplicationContext());
-            H3IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H3IV.setScaleType(ImageView.ScaleType.CENTER);
-            H3IV.setImageBitmap(C3Bitmap);
-            H4IV = new ImageView(getApplicationContext());
-            H4IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H4IV.setScaleType(ImageView.ScaleType.CENTER);
-            H4IV.setImageBitmap(C4Bitmap);
-            H5IV = new ImageView(getApplicationContext());
-            H5IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H5IV.setScaleType(ImageView.ScaleType.CENTER);
-            H5IV.setImageBitmap(C5Bitmap);
-            H6IV = new ImageView(getApplicationContext());
-            H6IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H6IV.setScaleType(ImageView.ScaleType.CENTER);
-            H6IV.setImageBitmap(C6Bitmap);
-            H7IV = new ImageView(getApplicationContext());
-            H7IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H7IV.setScaleType(ImageView.ScaleType.CENTER);
-            H7IV.setImageBitmap(C7Bitmap);
-            H8IV = new ImageView(getApplicationContext());
-            H8IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H8IV.setScaleType(ImageView.ScaleType.CENTER);
-            H8IV.setImageBitmap(C8Bitmap);
-            H9IV = new ImageView(getApplicationContext());
-            H9IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H9IV.setScaleType(ImageView.ScaleType.CENTER);
-            H9IV.setImageBitmap(C9Bitmap);
-            H10IV = new ImageView(getApplicationContext());
-            H10IV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            H10IV.setScaleType(ImageView.ScaleType.CENTER);
-            H10IV.setImageBitmap(C10Bitmap);
-            HJIV = new ImageView(getApplicationContext());
-            HJIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            HJIV.setScaleType(ImageView.ScaleType.CENTER);
-            HJIV.setImageBitmap(CJBitmap);
-            HQIV = new ImageView(getApplicationContext());
-            HQIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            HQIV.setScaleType(ImageView.ScaleType.CENTER);
-            HQIV.setImageBitmap(CQBitmap);
-            HKIV = new ImageView(getApplicationContext());
-            HKIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            HKIV.setScaleType(ImageView.ScaleType.CENTER);
-            HKIV.setImageBitmap(CKBitmap);
-            HAIV = new ImageView(getApplicationContext());
-            HAIV.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            HAIV.setScaleType(ImageView.ScaleType.CENTER);
-            HAIV.setImageBitmap(CABitmap);
 
 
         }
 
+        public void checkDebugInfo() {
+            Log.d(TAG,"current Player = "+currentPlayer.name);
+            for (Card card: currentPlayer.cardsWon) {
+                Log.d(TAG,"Cards Won = "+card.title);
+            }
+
+            Log.d(TAG, "Current Trick = " + HeartsTrick.trickCount);
+            Log.d(TAG,"Trick Player Cards = "+currentTrick.playedCards);
+            Log.d(TAG, "Number of players = " + playerCount);
+
+
+        }
+
+        public void startNewHeartsTrick() {
+            //If the trick is over
+            if (currentTrick.playedCards.size() >playerCount-1) {
+
+                if (isLastTrick()) {
+                    deckIsFinished = true;
+                    createDeck();
+                    invalidate();
+                }
+
+                if (!deckIsFinished) {
+                    drainPlayerCards();
+                }
+
+                currentTrick = new HeartsTrick(players);
+                currentPlayer = HeartsTrick.playerThatWonLastTrick;
+                return;
+            }
+        }
+
     }
 
-
-
-    public void pickUpPlayers() {
-        String jsonPlayers;
-
-        jsonPlayers = getIntent().getStringExtra("jsonPlayers");
-
-        Gson gson = new Gson();
-        players = gson.fromJson(jsonPlayers, new TypeToken<ArrayList<Player>>() {
-        }.getType());
-
-    }
 
     @Override
     public void onBackPressed() {
@@ -640,7 +563,6 @@ public class HeartsActivity extends Activity {
 
 
 
-
     public void configureDisplay() {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
@@ -648,8 +570,10 @@ public class HeartsActivity extends Activity {
         screenWidth = size.x;
         screenHeight = size.y;
 
-        int middleX = screenWidth/2;
-        int middleY= screenHeight/2;
+        textSize = screenWidth/10;
+
+        middleX = screenWidth/2;
+        middleY= screenHeight/2;
 
 
         double cardDisplayRatio = 726 / 500.0;
@@ -666,9 +590,17 @@ public class HeartsActivity extends Activity {
         cardOverlapFraction = ((1/3.0) * cardWidth);
 
         cardHeight = (int) (cardWidth * cardDisplayRatio);
-        int halfCardWidth = cardWidth/2;
-        int halfCardHeight = cardHeight/2;
+        halfCardWidth = cardWidth/2;
+        halfCardHeight = cardHeight/2;
 
+
+        placeCardRect = new Rect(middleX-(cardWidth*2),
+                middleY-(cardHeight*2),
+                middleX+(cardWidth*2),
+                middleY+(int)(cardHeight*1.5));
+
+
+        placeCardRegion.set(placeCardRect);
 
         placeCardRect = new Rect(middleX-halfCardWidth,
                 middleY-halfCardHeight,
@@ -676,8 +608,31 @@ public class HeartsActivity extends Activity {
                 middleY+halfCardHeight);
 
 
-        placeCardRegion.set(placeCardRect);
 
+        //Generate Rects to display the other players cards
+
+        int leftEdge = 10;
+        int rightEdge = screenWidth-10;
+        int topEdge = 10;
+
+        //Left middle
+        otPlayer1Rect = new Rect(leftEdge,middleY-halfCardHeight,leftEdge+cardWidth,middleY+halfCardHeight);
+
+        if (playerCount>2) {
+            //Middle Top
+            otPlayer2Rect = new Rect(middleX-halfCardWidth,topEdge,middleX+halfCardWidth,topEdge+cardHeight);
+        }
+        if ( playerCount>3) {
+            //Right middle
+            otPlayer3Rect = new Rect(rightEdge-cardWidth,middleY-halfCardHeight,rightEdge,middleY+halfCardHeight);
+        }
+        if (playerCount>4) {
+            //Alternate Left (north west)
+            otPlayer4Rect = new Rect(leftEdge,topEdge,leftEdge+cardWidth,topEdge+cardHeight);
+        }
+        if (playerCount>5) {
+            otPlayer5Rect = new Rect(rightEdge-cardWidth,topEdge,rightEdge,topEdge+cardHeight);
+        }
 
 
         //Card Bitmaps
@@ -805,50 +760,72 @@ public class HeartsActivity extends Activity {
         SABitmap = Bitmap.createScaledBitmap(SABitmap, cardWidth, cardHeight, false);
         bitmapMap.put("SA",SABitmap);
 
-        H2Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h2);
-        H2Bitmap = Bitmap.createScaledBitmap(H2Bitmap,cardWidth,cardHeight,false);
+        H2Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h2);
+        H2Bitmap = Bitmap.createScaledBitmap(H2Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H2",H2Bitmap);
-        H3Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h3);
-        H3Bitmap = Bitmap.createScaledBitmap(H3Bitmap,cardWidth,cardHeight,false);
+        H3Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h3);
+        H3Bitmap = Bitmap.createScaledBitmap(H3Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H3",H3Bitmap);
-        H4Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h4);
-        H4Bitmap = Bitmap.createScaledBitmap(H4Bitmap,cardWidth,cardHeight,false);
+        H4Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h4);
+        H4Bitmap = Bitmap.createScaledBitmap(H4Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H4",H4Bitmap);
-        H5Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h5);
-        H5Bitmap = Bitmap.createScaledBitmap(H5Bitmap,cardWidth,cardHeight,false);
+        H5Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h5);
+        H5Bitmap = Bitmap.createScaledBitmap(H5Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H5",H5Bitmap);
-        H6Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h6);
-        H6Bitmap = Bitmap.createScaledBitmap(H6Bitmap,cardWidth,cardHeight,false);
+        H6Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h6);
+        H6Bitmap = Bitmap.createScaledBitmap(H6Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H6",H6Bitmap);
-        H7Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h7);
-        H7Bitmap = Bitmap.createScaledBitmap(H7Bitmap,cardWidth,cardHeight,false);
+        H7Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h7);
+        H7Bitmap = Bitmap.createScaledBitmap(H7Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H7",H7Bitmap);
-        H8Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h8);
-        H8Bitmap = Bitmap.createScaledBitmap(H8Bitmap,cardWidth,cardHeight,false);
+        H8Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h8);
+        H8Bitmap = Bitmap.createScaledBitmap(H8Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H8",H8Bitmap);
-        H9Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h9);
-        H9Bitmap = Bitmap.createScaledBitmap(H9Bitmap,cardWidth,cardHeight,false);
+        H9Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h9);
+        H9Bitmap = Bitmap.createScaledBitmap(H9Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H9",H9Bitmap);
-        H10Bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.h10);
-        H10Bitmap = Bitmap.createScaledBitmap(H10Bitmap,cardWidth,cardHeight,false);
+        H10Bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.h10);
+        H10Bitmap = Bitmap.createScaledBitmap(H10Bitmap, cardWidth, cardHeight, false);
         bitmapMap.put("H10",H10Bitmap);
-        HJBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hj);
-        HJBitmap = Bitmap.createScaledBitmap(HJBitmap,cardWidth,cardHeight,false);
+        HJBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.hj);
+        HJBitmap = Bitmap.createScaledBitmap(HJBitmap, cardWidth, cardHeight, false);
         bitmapMap.put("HJ",HJBitmap);
-        HQBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hq);
-        HQBitmap = Bitmap.createScaledBitmap(HQBitmap,cardWidth,cardHeight,false);
+        HQBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.hq);
+        HQBitmap = Bitmap.createScaledBitmap(HQBitmap, cardWidth, cardHeight, false);
         bitmapMap.put("HQ",HQBitmap);
-        HKBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.hk);
-        HKBitmap = Bitmap.createScaledBitmap(HKBitmap,cardWidth,cardHeight,false);
+        HKBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.hk);
+        HKBitmap = Bitmap.createScaledBitmap(HKBitmap, cardWidth, cardHeight, false);
         bitmapMap.put("HK",HKBitmap);
-        HABitmap = BitmapFactory.decodeResource(getResources(),R.drawable.ha);
-        HABitmap = Bitmap.createScaledBitmap(HABitmap,cardWidth,cardHeight,false);
+        HABitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ha);
+        HABitmap = Bitmap.createScaledBitmap(HABitmap, cardWidth, cardHeight, false);
         bitmapMap.put("HA",HABitmap);
 
+        cardBackBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.cardback);
+        cardBackBitmap = Bitmap.createScaledBitmap(cardBackBitmap,cardWidth,cardHeight,false);
+        bitmapMap.put("cardback",cardBackBitmap);
 
 
 
     }
 
+
+    public void drainPlayerCards() {
+        for (Player player: players) {
+            Card oneCard = player.hand.get(0);
+            player.cardsWon = (ArrayList<Card>) player.hand.clone();
+            player.cardsWon.remove(0);
+            player.hand.clear();
+            player.hand.add(oneCard);
+        }
+    }
+
+    public boolean isLastTrick() {
+        if (currentPlayer.hand.size() ==0) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 
 }

@@ -32,12 +32,10 @@ public class HeartsTrick {
     }
 
     public Player whoGoesFirst() {
-        Log.d(TAG,"playerThatWonLastTrick = "+playerThatWonLastTrick.name);
         if (!playerThatWonLastTrick.equals(null)) {
             return findPlayerWithTwoOfClubs();
         }
         else {
-            Log.d(TAG,"Inside loop: layerThatWonLastTrick = "+playerThatWonLastTrick.name);
             return playerThatWonLastTrick;
 
         }
@@ -45,7 +43,7 @@ public class HeartsTrick {
 
     public Player findPlayerWithTwoOfClubs() {
         for (Player player: players) {
-            for (Card card: player.hand.cards) {
+            for (Card card: player.hand) {
                 if (card.title.matches("twoOfClubs")) {
                     return player;
                 }
@@ -70,25 +68,17 @@ public class HeartsTrick {
     }
 
     private void endTrick() {
-        Log.d(TAG,"huh?");
-
-
 
         Card winningCard = findHighestCard();
         findOwnerAndStickItToThem(winningCard);
 
 
-
-
-
     }
 
+
     private Card findHighestCard() {
-        ArrayList<Card> copyCards = new ArrayList<Card>();
-        //Had to copy playedCards this way so it was not overwritten. Otherwise all cards would be removed from it :(
-        for (Card card: playedCards) {
-            copyCards.add(card);
-        }
+
+        ArrayList<Card> copyCards = (ArrayList<Card>) playedCards.clone();
 
         Card highest = copyCards.remove(0);
 
@@ -114,15 +104,17 @@ public class HeartsTrick {
     }
 
     private void findOwnerAndStickItToThem(Card winningCard) {
-        Log.d(TAG,"winningCard owner = "+winningCard.owner + "  title   == "+winningCard.title);
 
         for (Player p: players) {
             if (p.name == winningCard.owner) {
                 p.giveCards(playedCards);
                 playerThatWonLastTrick=p;
-                Log.d(TAG,"playerThatWonLastTrick = === "+playerThatWonLastTrick);
             }
         }
+    }
+
+    public static void resetTrickCount() {
+        trickCount=0;
     }
 
 

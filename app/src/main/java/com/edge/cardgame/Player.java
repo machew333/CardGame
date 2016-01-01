@@ -12,24 +12,19 @@ public class Player {
     ArrayList<Card> cardsWon = new ArrayList<Card>();
     static int numberOfPlayers;
     int orderNumber;
-
-
-    Hand hand = new Hand(name);
+    ArrayList<Card> hand = new ArrayList<Card>();
 
     public Player() {
         this.name = "Player" + numberOfPlayers;
-        hand.ownCards();
         numberOfPlayers++;
     }
     public Player(String name) {
         this.name = name;
-        hand.ownCards();
         numberOfPlayers++;
     }
     public Player(String name, int orderNumber) {
         this.name = name;
         this.orderNumber=orderNumber;
-        hand.ownCards();
         numberOfPlayers++;
     }
 
@@ -41,6 +36,26 @@ public class Player {
     public void dealCard(Card dealtCard) {
         //hand.add
     }
+
+    public int getRoundScore() {
+        int roundScore =0;
+        for (Card card: this.cardsWon) {
+            roundScore = roundScore+ card.getScore();
+        }
+        this.roundScore = roundScore;
+        return roundScore;
+    }
+    public void addRoundToTotalScore() {
+        totalScore = totalScore +roundScore;
+        cardsWon.clear();
+        roundScore=0;
+    }
+
+    public int getTotalScore() {
+        return this.totalScore;
+
+    }
+
 
 
     public int countCards() {

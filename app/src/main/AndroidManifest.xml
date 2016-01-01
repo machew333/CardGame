@@ -16,19 +16,20 @@
             android:name=".HeartsActivity"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
 
 
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.edge.cardgame.MainActivity" />
         </activity>
-        <activity android:name=".SetupActivity"
+        <activity
+            android:name=".SetupActivity"
             android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.edge.cardgame.MainActivity" />
