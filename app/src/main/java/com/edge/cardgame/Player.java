@@ -13,6 +13,8 @@ public class Player {
     static int numberOfPlayers;
     int orderNumber;
     ArrayList<Card> hand = new ArrayList<Card>();
+    ArrayList<Card> possibleMoves = new ArrayList<Card>();
+
 
     public Player() {
         this.name = "Player" + numberOfPlayers;
@@ -37,18 +39,19 @@ public class Player {
         //hand.add
     }
 
-    public int getRoundScore() {
+    public int calculateRoundScore() {
         int roundScore =0;
         for (Card card: this.cardsWon) {
-            roundScore = roundScore+ card.getScore();
+            roundScore = roundScore+ card.getHeartsScore();
         }
         this.roundScore = roundScore;
         return roundScore;
     }
+    public int getRoundScore() {
+        return this.roundScore;
+    }
     public void addRoundToTotalScore() {
         totalScore = totalScore +roundScore;
-        cardsWon.clear();
-        roundScore=0;
     }
 
     public int getTotalScore() {
@@ -56,20 +59,19 @@ public class Player {
 
     }
 
-
-
-    public int countCards() {
-        for (Card c: cardsWon) {
-            totalScore+=c.Count();
-        }
-        return totalScore;
-    }
-
     public void setName(String name) {
         this.name = name;
     }
     public void setOrderNumber(int orderNumber) {
         this.orderNumber = orderNumber;
+    }
+
+    public void setRoundScore(int roundScore) {
+        this.roundScore = roundScore;
+    }
+
+    public void clearCardsWon() {
+        cardsWon.clear();
     }
 
 

@@ -153,7 +153,7 @@ public class Card {
         this.region.set(postion);
     }
 
-    public int getScore() {
+    public int getHeartsScore() {
         if (this.suitValue ==2) {
             return 1;
         }

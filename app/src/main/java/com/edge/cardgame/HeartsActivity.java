@@ -66,31 +66,33 @@ public class HeartsActivity extends Activity {
     double fractionOfScreenWithCards = .95;
     double startingPlaceOfCards = (1-fractionOfScreenWithCards)/2;
 
-    Player currentPlayer;
+    Player currentPlayer,winner;
 
     HeartsTrick currentTrick;
     boolean heartsIsBroken = false;
     boolean cardSelected = false;
-    boolean deckIsFinished = false;
+    boolean deckIsFinished, roundResultsDisplayed = false;
+    boolean gameOver = false;
+    boolean waitForTrickDrawing = false;
     Card currentCard;
 
     public Rect otPlayer1Rect,otPlayer2Rect,otPlayer3Rect, otPlayer4Rect, otPlayer5Rect;
+
+    public int trickIsOver = 0;
+    int endScore = 50;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-
-        pickUpPlayers();
-        //alternatePickUpPlayers();
-
-
+        //pickUpPlayers();
+        alternatePickUpPlayers();
         initializeNewDeck();
-
         configureDisplay();
+
         tableView = new TableView(this);
         setContentView(tableView);
+
     }
 
     public void createDeck() {
@@ -107,7 +109,6 @@ public class HeartsActivity extends Activity {
         deckIsFinished =false;
         HeartsTrick.resetTrickCount();
         startNewHeartsTrick();
-
     }
 
     public void pickUpPlayers() {
@@ -157,391 +158,60 @@ public class HeartsActivity extends Activity {
 
     public void displayDialog() {
 
+    }
+
+    public boolean checkIsGameOver() {
+        return false;
+    }
+
+    public void findWhereOtherPlayersAreSitting() {
+        ArrayList<Player> tempPlayers = playerQueue.reorderQueue(currentPlayer);
+        players = (ArrayList<Player>) tempPlayers.clone();
 
     }
 
-
-
-    class TableView extends View {
-        public Paint cardPaint, tintPaint,placeCardPaint,highlighPaint, textPaint;
-
-        public int trickIsOver = 0;
-
-
-
-        public TableView(Context context) {
-            super(context);
-
-
-            cardPaint = new Paint(Paint.DITHER_FLAG);
-            tintPaint = new Paint();
-            tintPaint.setColor(0x33000000);
-            placeCardPaint = new Paint();
-            placeCardPaint.setColor(0x992196F3);
-            highlighPaint = new Paint();
-            highlighPaint.setColor(0x33EEFF41);
-            textPaint = new Paint();
-            textPaint.setColor(0xFF000000);
-            textPaint.setTextSize(textSize);
-
-
+    public void checkDebugInfo() {
+        Log.d(TAG,"current Player = "+currentPlayer.name);
+        for (Card card: currentPlayer.cardsWon) {
+            Log.d(TAG,"Cards Won = "+card.title);
         }
 
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            canvas.drawColor(0xFF4CAF50); //Green
+        Log.d(TAG, "Current Trick = " + HeartsTrick.trickCount);
+        Log.d(TAG, "Trick Player Cards = " + currentTrick.playedCards);
+        Log.d(TAG, "Number of players = " + playerCount);
 
-            if (deckIsFinished) {
-                drawDeckIsFinished(canvas);
+
+    }
+
+    public void placeCard() {
+        int index = currentPlayer.hand.indexOf(currentCard);
+
+        //Sometimes I was getting invalid index because the user clicks for longer than a few milliseconds.
+        if (index !=-1){
+
+            Card cardWeWant;
+            cardWeWant = currentPlayer.hand.remove(index);
+            cardWeWant.setOwner(currentPlayer.name);
+            if (cardWeWant.suitValue ==2) {
+                heartsIsBroken = true;
             }
 
-            else if (trickIsOver>0) {
-                drawTrickIsOver(canvas);
-            }
-            else {
-                drawNormalGameplay(canvas);
-            }
-        }
-
-        public void drawDeckIsFinished(Canvas canvas)  {
-            canvas.drawColor(0xFF4CAF50); //Green
-            drawPlayerScores(canvas);
-            displayDialog();
-            delayDisplay(1000);
-        }
-
-        public void drawTrickIsOver(Canvas canvas) {
-            drawPlayerHand(canvas);
-            drawCurrentTrick(canvas);
-            displayTrickWinner(canvas);
-            if (trickIsOver ==1) {
-
-                startNewHeartsTrick();
-
-                delayDisplay(1000);
-                trickIsOver--;
-            }
-            trickIsOver--;
-            invalidate();
-        }
-
-        public void drawNormalGameplay(Canvas canvas) {
-            canvas.drawColor(0xFF4CAF50); //Green
-            drawCurrentTrick(canvas);
-            drawPlayerHand(canvas);
-            displayCurrentPlayerName(canvas);
-            drawOtherPlayerHands(canvas);
-
-
-            if (cardSelected) {
-                canvas.drawRect(placeCardRect, placeCardPaint);
-            }
-
-        }
-
-
-
-
-
-
-        public boolean onTouchEvent(MotionEvent event) {
-            touchedX = (int) event.getRawX();
-            touchedY = (int) event.getRawY();
-
-            findCurrentCardClicked();
-
-            switch (event.getAction()) {
-
-                case MotionEvent.ACTION_DOWN: {
-                    findCurrentCardClicked();
-                    if (deckIsFinished) {
-                        initializeNewDeck();
-                        Log.d(TAG, "Name = " + currentPlayer.name + " hand = " + currentPlayer.hand);
-                    }
-
-                    break;
-                }
-            }
-            return true;
-        }
-
-        public void findCurrentCardClicked() {
-
-            if (cardSelected==true && placeCardRegion.contains(touchedX,touchedY)) {
-                placeCard();
-            }
-            else {
-                cardSelected=false;
-            }
-            for (Card card: currentPlayer.hand) {
-                if (card.region.contains(touchedX,touchedY) && card.isClickable) {
-                    currentCard = card;
-                    cardSelected = true;
-                }
-            }
-
-            invalidate();
-        }
-
-        public void placeCard() {
-            int index = currentPlayer.hand.indexOf(currentCard);
-
-            //Sometimes I was getting invalid index because the user clicks for longer than a few milliseconds.
-            if (index !=-1){
-
-                Card cardWeWant;
-                cardWeWant = currentPlayer.hand.remove(index);
-                cardWeWant.setOwner(currentPlayer.name);
-                if (cardWeWant.suitValue ==2) {
-                    heartsIsBroken = true;
-                }
-
-                currentTrick.playCard(cardWeWant);
-                cardSelected = false;
-                if (currentTrick.playedCards.size() >playerCount-1) {
-                    trickIsOver=2;
-                }
-                else {
-                    selectNextPlayer();
-                }
-
-            }
-
-        }
-
-        public void selectNextPlayer() {
-            currentPlayer = playerQueue.getNextPlayer(currentPlayer);
-        }
-
-
-        public void drawCurrentTrick(Canvas canvas) {
-
-            int xCoordinate = (int) (middleX - ((playerCount)*cardOverlapFraction));
-            int yCoordinate = middleY- halfCardHeight;
-
-            for (Card card : currentTrick.playedCards) {
-
-                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
-
-                Bitmap cardBitmap = card.findBitmap(bitmapMap);
-                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
-
-            }
-        }
-
-        public void displayCurrentPlayerName(Canvas canvas) {
-            String name= currentPlayer.name;
-
-            canvas.drawText(name, 10, screenHeight/4, textPaint);
-
-        }
-
-        public void displayTrickWinner(Canvas canvas) {
-            String winner = HeartsTrick.playerThatWonLastTrick.name;
-            canvas.drawText(winner + " wins the trick",10,middleY-cardHeight, textPaint);
-
-        }
-
-        public void delayDisplay(int delayTime) {
-            try {
-                Thread.sleep(delayTime);
-            } catch(InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        public void drawPlayerHand(Canvas canvas) {
-            ArrayList<Card> possibleMoves = getPossibleMoves();
-
-
-            int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
-
-            for (Card card: currentPlayer.hand) {
-
-                boolean tint = true;
-                int yCoordinate = (int) (screenHeight-(cardHeight));
-
-                if (possibleMoves.contains(card)) {
-                    yCoordinate = (int) (yCoordinate-(cardHeight/4.0));
-                    tint =false;
-
-                }
-
-                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
-
-                Rect tempRect = new Rect(xCoordinate,yCoordinate,xCoordinate+cardWidth,yCoordinate+cardHeight);
-
-
-
-                Bitmap cardBitmap = card.findBitmap(bitmapMap);
-                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
-
-                if (tint) {
-                    card.setIsClickable(false);
-                    canvas.drawRect(tempRect,tintPaint);
-                }
-                else {
-                    card.setIsClickable(true);
-                    card.setPostion(tempRect);
-
-                    if (card.equals(currentCard) && cardSelected) {
-                        canvas.drawRect(tempRect,highlighPaint);
-                    }
-                }
-
-
-
-
-
-            }
-
-
-
-        }
-
-        public void drawOtherPlayerHands(Canvas canvas) {
-
-            findWhereOtherPlayersAreSitting();
-
-            canvas.drawBitmap(cardBackBitmap, otPlayer1Rect.left, otPlayer1Rect.top, cardPaint);
-
-            if (playerCount>2) {
-                canvas.drawBitmap(cardBackBitmap,otPlayer2Rect.left,otPlayer2Rect.top,cardPaint);
-            }
-            if (playerCount>3) {
-                canvas.drawBitmap(cardBackBitmap,otPlayer3Rect.left,otPlayer3Rect.top,cardPaint);
-            }
-            if (playerCount>4) {
-                canvas.drawBitmap(cardBackBitmap,otPlayer4Rect.left,otPlayer4Rect.top,cardPaint);
-            }
-            if (playerCount>5) {
-                canvas.drawBitmap(cardBackBitmap, otPlayer5Rect.left, otPlayer5Rect.top, cardPaint);
-            }
-
-
-        }
-
-        public void findWhereOtherPlayersAreSitting() {
-
-
-            ArrayList<Player> tempPlayers = playerQueue.reorderQueue(currentPlayer);
-
-            players = (ArrayList<Player>) tempPlayers.clone();
-
-        }
-
-        public ArrayList<Card> getPossibleMoves() {
-            ArrayList<Card> possibleMoves = new ArrayList<Card>();
-
-
-            if (currentTrick.playedCards.isEmpty()) {
-
-                if (HeartsTrick.trickCount ==1) {
-
-                    for (Card card: currentPlayer.hand) {
-
-                        if (card.title.equals("twoOfClubs")) {
-                            possibleMoves.clear();
-                            possibleMoves.add(card);
-                            break;
-                        }
-                        //Can't play value cards
-                        if (card.getScore() ==0) {
-                            possibleMoves.add(card);
-                        }
-                    }
-
-                }
-                else {
-                    for (Card c: currentPlayer.hand) {
-                        if (c.suitValue ==2) {
-                            if (heartsIsBroken) {
-                                possibleMoves.add(c);
-                            }
-                        }
-                        else {
-                            possibleMoves.add(c);
-                        }
-                    }
-                }
-            }
-            else {
-
-                for (Card card: currentPlayer.hand) {
-                    if (card.suitValue == currentTrick.mainSuitValue ) {
-                        possibleMoves.add(card);
-                    }
-                }
-            }
-
-            if (possibleMoves.isEmpty()) {
-                possibleMoves = currentPlayer.hand;
-            }
-            return possibleMoves;
-        }
-
-
-        public void drawPlayerScores(Canvas canvas) {
-            int xCoordinate = 10;
-            int yCoordinate =10;
-            int lowerYCoordinate = middleY;
-            for (Player player: players) {
-                player.getRoundScore();
-
-
-                yCoordinate+=textSize;
-                lowerYCoordinate +=textSize;
-
-                canvas.drawText(player.name+ " score == "+player.roundScore,xCoordinate,yCoordinate, textPaint);
-                player.addRoundToTotalScore();
-                canvas.drawText(player.name + " total score = " + player.totalScore, xCoordinate,lowerYCoordinate, textPaint);
-
-                if (player.totalScore >=100) {
-                    //endGame();
-                }
-            }
-            canvas.drawText("Tap to continue",xCoordinate,screenHeight-cardHeight, textPaint);
-
-
-
-        }
-
-        public void checkDebugInfo() {
-            Log.d(TAG,"current Player = "+currentPlayer.name);
-            for (Card card: currentPlayer.cardsWon) {
-                Log.d(TAG,"Cards Won = "+card.title);
-            }
-
-            Log.d(TAG, "Current Trick = " + HeartsTrick.trickCount);
-            Log.d(TAG,"Trick Player Cards = "+currentTrick.playedCards);
-            Log.d(TAG, "Number of players = " + playerCount);
-
-
-        }
-
-        public void startNewHeartsTrick() {
-            //If the trick is over
+            currentTrick.playCard(cardWeWant);
+            cardSelected = false;
             if (currentTrick.playedCards.size() >playerCount-1) {
-
-                if (isLastTrick()) {
-                    deckIsFinished = true;
-                    createDeck();
-                    invalidate();
-                }
-
-                if (!deckIsFinished) {
-                    drainPlayerCards();
-                }
-
-                currentTrick = new HeartsTrick(players);
-                currentPlayer = HeartsTrick.playerThatWonLastTrick;
-                return;
+                trickIsOver=2;
             }
+            else {
+                selectNextPlayer();
+            }
+
         }
 
     }
 
+    public void selectNextPlayer() {
+        currentPlayer = playerQueue.getNextPlayer(currentPlayer);
+    }
 
     @Override
     public void onBackPressed() {
@@ -561,7 +231,24 @@ public class HeartsActivity extends Activity {
                 .setNegativeButton(android.R.string.no, null).show();
     }
 
+    public void drainPlayerCards() {
+        for (Player player: players) {
+            Card oneCard = player.hand.get(0);
+            player.cardsWon = (ArrayList<Card>) player.hand.clone();
+            player.cardsWon.remove(0);
+            player.hand.clear();
+            player.hand.add(oneCard);
+        }
+    }
 
+    public boolean isLastTrick() {
+        if (currentPlayer.hand.size() ==0) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 
     public void configureDisplay() {
         Display display = getWindowManager().getDefaultDisplay();
@@ -583,9 +270,15 @@ public class HeartsActivity extends Activity {
         double sectionOfScreenWithCards = screenWidth*fractionOfScreenWithCards;
 
 
-        //x = (6L/(n+7))    Equation for width of a card based on number of cards and size of screen being used.  w/ a 1/6 card overlap
+        ;
 
-        cardWidth = (int) (3*sectionOfScreenWithCards)/(15);
+        // N = cards, F = 3
+        //x = (F*L/((n-1)+F))    Equation for width of a card based on number of cards and size of screen being used.  w/ a 1/F card overlap
+        cardWidth = (int) ((3*sectionOfScreenWithCards)/(15.0));
+        if (playerCount ==3) {
+            cardWidth = (int) ((3*sectionOfScreenWithCards)/(19.0));
+        }
+
         //The amount the cards overlap as a fraction of the cardWidth
         cardOverlapFraction = ((1/3.0) * cardWidth);
 
@@ -809,23 +502,330 @@ public class HeartsActivity extends Activity {
     }
 
 
-    public void drainPlayerCards() {
-        for (Player player: players) {
-            Card oneCard = player.hand.get(0);
-            player.cardsWon = (ArrayList<Card>) player.hand.clone();
-            player.cardsWon.remove(0);
-            player.hand.clear();
-            player.hand.add(oneCard);
-        }
-    }
 
-    public boolean isLastTrick() {
-        if (currentPlayer.hand.size() ==0) {
+
+
+
+
+    class TableView extends View {
+        public Paint cardPaint, tintPaint,placeCardPaint,highlighPaint, textPaint;
+
+
+        public TableView(Context context) {
+            super(context);
+
+
+            cardPaint = new Paint(Paint.DITHER_FLAG);
+            tintPaint = new Paint();
+            tintPaint.setColor(0x33000000);
+            placeCardPaint = new Paint();
+            placeCardPaint.setColor(0x992196F3);
+            highlighPaint = new Paint();
+            highlighPaint.setColor(0x33EEFF41);
+            textPaint = new Paint();
+            textPaint.setColor(0xFF000000);
+            textPaint.setTextSize(textSize);
+
+
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawColor(0xFF4CAF50); //Green
+
+            if (deckIsFinished) {
+                Log.d(TAG,"deckIsFinished ");
+                drawDeckIsFinished(canvas);
+            }
+
+            else if (trickIsOver>0) {
+                Log.d(TAG,"draw trick over");
+                drawTrickIsOver(canvas);
+            }
+            else if (checkIsGameOver()) {
+                drawEndGame(canvas);
+            }
+
+            else {
+                Log.d(TAG,"drawnormal");
+                drawNormalGameplay(canvas);
+            }
+        }
+
+        public void drawDeckIsFinished(Canvas canvas)  {
+            canvas.drawColor(0xFF4CAF50); //Green
+            drawPlayerScores(canvas);
+            displayDialog();
+            roundResultsDisplayed =true;
+            waitForTrickDrawing = false;
+
+        }
+
+        public void drawTrickIsOver(Canvas canvas) {
+            if (isLastTrick()) {
+                deckIsFinished = true;
+            }
+            waitForTrickDrawing = true;
+            drawPlayerHand(canvas);
+            drawOtherPlayerHands(canvas);
+            drawCurrentTrick(canvas);
+            displayTrickWinner(canvas);
+            if (trickIsOver ==1) {
+                Log.d(TAG, "new Hearts trick");
+
+
+                startNewHeartsTrick();
+                delayDisplay(1000);
+                waitForTrickDrawing = false;
+
+                trickIsOver--;
+            }
+            trickIsOver--;
+            invalidate();
+        }
+
+        public void drawNormalGameplay(Canvas canvas) {
+            canvas.drawColor(0xFF4CAF50); //Green
+            drawCurrentTrick(canvas);
+            drawPlayerHand(canvas);
+            drawCurrentPlayerName(canvas);
+            drawOtherPlayerHands(canvas);
+
+
+            if (cardSelected) {
+                canvas.drawRect(placeCardRect, placeCardPaint);
+            }
+
+        }
+
+        public boolean onTouchEvent(MotionEvent event) {
+            touchedX = (int) event.getRawX();
+            touchedY = (int) event.getRawY();
+
+
+            switch (event.getAction()) {
+
+                case MotionEvent.ACTION_DOWN: {
+
+
+                    if (deckIsFinished) {
+                        if (gameOver) {
+
+                        }
+                        else if (waitForTrickDrawing) {
+                            break;
+                        }
+                        if (roundResultsDisplayed) {
+                            Log.d(TAG,"takes round results path");
+                            initializeNewDeck();
+                            invalidate();
+                        }
+                        else {
+                            return true;
+                        }
+
+                    }
+                    else {
+                        Log.d(TAG,"takes card click path");
+                        findCurrentCardClicked();
+                    }
+                   break;
+                }
+            }
             return true;
         }
-        else {
-            return false;
+
+        public void findCurrentCardClicked() {
+
+            if (cardSelected==true && placeCardRegion.contains(touchedX,touchedY)) {
+                placeCard();
+            }
+            else {
+                cardSelected=false;
+            }
+            for (Card card: currentPlayer.hand) {
+                if (card.region.contains(touchedX,touchedY) && card.isClickable) {
+                    currentCard = card;
+                    cardSelected = true;
+                }
+            }
+
+            invalidate();
         }
+
+        public void drawCurrentTrick(Canvas canvas) {
+
+            int xCoordinate = (int) (middleX - ((playerCount)*cardOverlapFraction));
+            if (playerCount ==6) {
+                xCoordinate =(int) (middleX - ((5)*cardOverlapFraction));
+            }
+            int yCoordinate = middleY- halfCardHeight;
+
+            for (Card card : currentTrick.playedCards) {
+
+                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
+
+                Bitmap cardBitmap = card.findBitmap(bitmapMap);
+                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
+
+            }
+        }
+
+        public void drawCurrentPlayerName(Canvas canvas) {
+            String name= currentPlayer.name;
+            String score = ""+currentPlayer.roundScore;
+
+            canvas.drawText(name, 10, screenHeight/4, textPaint);
+            canvas.drawText(score,10,(screenHeight/4)+textSize,textPaint);
+
+        }
+
+        public void displayTrickWinner(Canvas canvas) {
+            String winner = HeartsTrick.playerThatWonLastTrick.name;
+            canvas.drawText(winner + " wins the trick",10,screenHeight-textSize-10, textPaint);
+
+        }
+
+        public void delayDisplay(int delayTime) {
+            try {
+                Thread.sleep(delayTime);
+            } catch(InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        public void drawPlayerHand(Canvas canvas) {
+            ArrayList<Card> possibleMoves = currentTrick.getPossibleMoves(currentPlayer,currentTrick.playedCards,currentTrick,heartsIsBroken);
+
+
+            int xCoordinate = (int) (startingPlaceOfCards*screenWidth - cardOverlapFraction);
+
+            for (Card card: currentPlayer.hand) {
+
+                boolean tint = true;
+                int yCoordinate = (int) (screenHeight-(cardHeight));
+
+                if (possibleMoves.contains(card)) {
+                    yCoordinate = (int) (yCoordinate-(cardHeight/4.0));
+                    tint =false;
+
+                }
+
+                xCoordinate = (int) (xCoordinate + cardOverlapFraction);
+
+                Rect tempRect = new Rect(xCoordinate,yCoordinate,xCoordinate+cardWidth,yCoordinate+cardHeight);
+
+
+
+                Bitmap cardBitmap = card.findBitmap(bitmapMap);
+                canvas.drawBitmap(cardBitmap, xCoordinate, yCoordinate, cardPaint);
+
+                if (tint) {
+                    card.setIsClickable(false);
+                    canvas.drawRect(tempRect,tintPaint);
+                }
+                else {
+                    card.setIsClickable(true);
+                    card.setPostion(tempRect);
+
+                    if (card.equals(currentCard) && cardSelected) {
+                        canvas.drawRect(tempRect,highlighPaint);
+                    }
+                }
+
+
+
+
+
+            }
+
+
+
+        }
+
+        public void drawOtherPlayerHands(Canvas canvas) {
+
+            findWhereOtherPlayersAreSitting();
+
+            canvas.drawBitmap(cardBackBitmap, otPlayer1Rect.left, otPlayer1Rect.top, cardPaint);
+
+            if (playerCount>2) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer2Rect.left,otPlayer2Rect.top,cardPaint);
+            }
+            if (playerCount>3) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer3Rect.left,otPlayer3Rect.top,cardPaint);
+            }
+            if (playerCount>4) {
+                canvas.drawBitmap(cardBackBitmap,otPlayer4Rect.left,otPlayer4Rect.top,cardPaint);
+            }
+            if (playerCount>5) {
+                canvas.drawBitmap(cardBackBitmap, otPlayer5Rect.left, otPlayer5Rect.top, cardPaint);
+            }
+        }
+
+        public void drawPlayerScores(Canvas canvas) {
+            int xCoordinate = 10;
+            int yCoordinate =10;
+            int lowerYCoordinate = middleY;
+
+            //Calculate is used instead of get because get will yield old number
+            players =playerQueue.calculateRoundScores(players);
+
+            players =playerQueue.sortByRoundScore(players);
+
+
+
+            for (Player player: players) {
+
+                yCoordinate+=textSize;
+                canvas.drawText(player.name + " round == " + player.roundScore, xCoordinate, yCoordinate, textPaint);
+            }
+            players =playerQueue.sortByTotalScore(players);
+
+            yCoordinate+=textSize*2;
+            for (Player player: players) {
+                yCoordinate+=textSize;
+                //player.addRoundToTotalScore();
+                canvas.drawText(player.name + " total = " + player.totalScore, xCoordinate,yCoordinate, textPaint);
+
+            }
+            canvas.drawText("Tap to continue", xCoordinate, screenHeight - (cardHeight / 2), textPaint);
+
+
+
+        }
+
+        public void drawEndGame(Canvas canvas) {
+            gameOver = true;
+            canvas.drawColor(0xFFF44336);
+            canvas.drawText("Game Over \n" + winner.name + " wins", 10, middleY, textPaint);
+            drawPlayerScores(canvas);
+
+        }
+
+        public void startNewHeartsTrick() {
+            //If the trick is over
+            if (currentTrick.playedCards.size() >playerCount-1) {
+
+                if (isLastTrick()) {
+                    deckIsFinished = true;
+                    createDeck();
+                    invalidate();
+                }
+
+                if (!deckIsFinished) {
+                    drainPlayerCards();
+                }
+
+                currentTrick = new HeartsTrick(players);
+                currentPlayer = HeartsTrick.playerThatWonLastTrick;
+                return;
+            }
+        }
+
     }
+
+
 
 }

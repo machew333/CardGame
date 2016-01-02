@@ -1,7 +1,5 @@
 package com.edge.cardgame;
 
-import android.util.Log;
-
 import java.util.ArrayList;
 
 /**
@@ -115,6 +113,68 @@ public class HeartsTrick {
 
     public static void resetTrickCount() {
         trickCount=0;
+    }
+
+
+    public ArrayList<Card> getPossibleMoves(Player currentPlayer,ArrayList<Card> playedCards, HeartsTrick currentTrick, boolean heartsIsBroken) {
+        ArrayList<Card> possibleMoves = new ArrayList<Card>();
+
+
+        if (playedCards.isEmpty()) {
+
+            if (HeartsTrick.trickCount ==1) {
+
+                for (Card card: currentPlayer.hand) {
+
+                    if (card.title.equals("twoOfClubs")) {
+                        possibleMoves.clear();
+                        possibleMoves.add(card);
+                        break;
+                    }
+
+                }
+
+            }
+            else {
+                for (Card c: currentPlayer.hand) {
+
+                    if (HeartsTrick.trickCount==1) {
+                        //Can't play value cards
+                        if (c.getHeartsScore() ==0) {
+                            //Log.d(TAG,"card = "+card.title);
+                            possibleMoves.add(c);
+                        }
+                    }
+                    else {
+                        if (c.suitValue ==2) {
+                            if (heartsIsBroken) {
+                                possibleMoves.add(c);
+                            }
+                        }
+                        else {
+                            possibleMoves.add(c);
+                        }
+                    }
+
+
+
+                }
+            }
+        }
+        else {
+
+            for (Card card: currentPlayer.hand) {
+                if (card.suitValue == currentTrick.mainSuitValue ) {
+                    possibleMoves.add(card);
+                }
+            }
+        }
+
+        if (possibleMoves.isEmpty()) {
+            possibleMoves = currentPlayer.hand;
+        }
+        currentPlayer.possibleMoves = possibleMoves;
+        return possibleMoves;
     }
 
 
