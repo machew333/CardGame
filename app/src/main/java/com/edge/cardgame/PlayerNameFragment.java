@@ -94,6 +94,7 @@ public class PlayerNameFragment extends Fragment implements View.OnClickListener
     private void nameAndCreatePlayers() {
         int ct=0;
 
+        players.clear();
         for (EditText et : editTexts)  {
             ct++;
             String playerName;

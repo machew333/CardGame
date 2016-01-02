@@ -2,8 +2,10 @@ package com.edge.cardgame;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -29,7 +31,7 @@ public class HeartsActivity extends Activity {
 
     protected String TAG = "hepMe";
 
-    public GameState currentGameState = new GameState();
+    public GameState gameState;
 
     TableView tableView;
     public Map<String,Bitmap> bitmapMap = new HashMap<String,Bitmap>();
@@ -79,20 +81,69 @@ public class HeartsActivity extends Activity {
     public Rect otPlayer1Rect,otPlayer2Rect,otPlayer3Rect, otPlayer4Rect, otPlayer5Rect;
 
     public int trickIsOver = 0;
-    int endScore = 50;
+    int endScore = 20;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //pickUpPlayers();
-        alternatePickUpPlayers();
-        initializeNewDeck();
+        if (savedInstanceState != null) {
+            gameState = loadGameState(savedInstanceState);
+
+
+            players = gameState.getPlayerStates();
+            currentPlayer = gameState.getCurrentPlayer();
+            currentTrick =gameState.getCurrentTrick();
+            playerQueue = new PlayerQueue(players);
+            playerCount = players.size();
+
+        }
+        else {
+            loadPlayers();
+            //alternateLoadPlayers();
+            initializeNewDeck();
+        }
+
+
         configureDisplay();
 
         tableView = new TableView(this);
         setContentView(tableView);
+    }
 
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        String jsonGameState = saveGameState();
+
+        savedInstanceState.putString("jsonGameState",jsonGameState);
+        Log.d(TAG, "saved State");
+
+        // Always call the superclass so it can save the view hierarchy state
+        super.onSaveInstanceState(savedInstanceState);
+        Log.d(TAG, "finish");
+    }
+
+    public String saveGameState() {
+        // Save the user's current game state
+        GameState gameState = new GameState();
+        gameState.setGameState("save1", currentPlayer, players, currentTrick, playerQueue);
+
+        Gson gson = new Gson();
+        String jsonGameState = gson.toJson(gameState);
+        return jsonGameState;
+    }
+
+    public GameState loadGameState(Bundle savedInstanceState) {
+        //Load save state
+        String jsonGameState;
+        jsonGameState = savedInstanceState.getString("jsonGameState");
+
+        saveGameState();
+
+        Gson gson = new Gson();
+        gameState = gson.fromJson(jsonGameState, new TypeToken<GameState>() {
+        }.getType());
+        return gameState;
     }
 
     public void createDeck() {
@@ -104,14 +155,13 @@ public class HeartsActivity extends Activity {
         createDeck();
         heartsDeck.shuffle();
         heartsDeck.dealOutAll();
-        ownCards();
         currentPlayer = heartsDeck.getStartPlayer();
         deckIsFinished =false;
         HeartsTrick.resetTrickCount();
         startNewHeartsTrick();
     }
 
-    public void pickUpPlayers() {
+    public void loadPlayers() {
         //Sent from setup activity
         String jsonPlayers;
 
@@ -123,13 +173,16 @@ public class HeartsActivity extends Activity {
 
         //I had to instantiate it this way for some reason.
 
-        for (Player player: tempPlayers) {
-            players.add(player);
+        if (players.isEmpty()) {
+            for (Player player: tempPlayers) {
+                players.add(player);
+            }
+            playerCount = players.size();
         }
-        playerCount = players.size();
+
     }
 
-    public void alternatePickUpPlayers() {
+    public void alternateLoadPlayers() {
         matt = new Player("matt",1);
         john = new Player("john",2);
         jeff = new Player("jeff",3);
@@ -150,23 +203,22 @@ public class HeartsActivity extends Activity {
         }
     }
 
-    public void ownCards() {
-        for (Player player: players) {
-            //player.ownHand();
-        }
-    }
-
     public void displayDialog() {
 
     }
 
-    public boolean checkIsGameOver() {
-        return false;
-    }
-
     public void findWhereOtherPlayersAreSitting() {
+        playerQueue = new PlayerQueue(players);
+
+        Log.d(TAG,"currentPlayer = "+currentPlayer.name);
         ArrayList<Player> tempPlayers = playerQueue.reorderQueue(currentPlayer);
+        Log.d(TAG,"temPlayers created");
+        players.clear();
+        for (Player player: tempPlayers) {
+            players.add(player);
+        }
         players = (ArrayList<Player>) tempPlayers.clone();
+        Log.d(TAG,"we get this far?");
 
     }
 
@@ -215,20 +267,36 @@ public class HeartsActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        new AlertDialog.Builder(this)
-                .setTitle("Card Game")
-                .setMessage("End this game?")
-                .setIcon(R.drawable.ic_launcher)
-                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        //do more to end this game safely
-                        finish();
 
 
-                    }
-                })
-                .setNegativeButton(android.R.string.no, null).show();
+        if (gameOver) {
+            gameState = new GameState();
+            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+            startActivity(intent);
+        }
+        else {
+            new AlertDialog.Builder(this)
+                    .setTitle("Card Game")
+                    .setMessage("End this game?")
+                    .setIcon(R.drawable.ic_launcher)
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            //do more to end this game safely
+                            Bundle bundle = new Bundle();
+                            bundle.putString("jsonGameState", saveGameState());
+                            onSaveInstanceState(bundle);
+
+                            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+                            startActivity(intent);
+
+
+                        }
+                    })
+                    .setNegativeButton(android.R.string.no, null).show();
+
+        }
+
     }
 
     public void drainPlayerCards() {
@@ -534,7 +602,12 @@ public class HeartsActivity extends Activity {
             super.onDraw(canvas);
             canvas.drawColor(0xFF4CAF50); //Green
 
-            if (deckIsFinished) {
+
+            if (playerQueue.checkIfGameOver(players, endScore)) {
+                Log.d(TAG,"path finished");
+                drawEndGame(canvas);
+            }
+            else if (deckIsFinished) {
                 Log.d(TAG,"deckIsFinished ");
                 drawDeckIsFinished(canvas);
             }
@@ -543,10 +616,6 @@ public class HeartsActivity extends Activity {
                 Log.d(TAG,"draw trick over");
                 drawTrickIsOver(canvas);
             }
-            else if (checkIsGameOver()) {
-                drawEndGame(canvas);
-            }
-
             else {
                 Log.d(TAG,"drawnormal");
                 drawNormalGameplay(canvas);
@@ -555,11 +624,13 @@ public class HeartsActivity extends Activity {
 
         public void drawDeckIsFinished(Canvas canvas)  {
             canvas.drawColor(0xFF4CAF50); //Green
-            drawPlayerScores(canvas);
+            drawRoundScores(canvas);
+            drawTotalScores(canvas);
             displayDialog();
             roundResultsDisplayed =true;
             waitForTrickDrawing = false;
 
+            canvas.drawText("Tap to continue", 10, screenHeight - (cardHeight / 2), textPaint);
         }
 
         public void drawTrickIsOver(Canvas canvas) {
@@ -572,7 +643,7 @@ public class HeartsActivity extends Activity {
             drawCurrentTrick(canvas);
             displayTrickWinner(canvas);
             if (trickIsOver ==1) {
-                Log.d(TAG, "new Hearts trick");
+                //Log.d(TAG, "new Hearts trick");
 
 
                 startNewHeartsTrick();
@@ -587,15 +658,20 @@ public class HeartsActivity extends Activity {
 
         public void drawNormalGameplay(Canvas canvas) {
             canvas.drawColor(0xFF4CAF50); //Green
+            Log.d(TAG, "can draw trick");
             drawCurrentTrick(canvas);
+            Log.d(TAG, "can draw hand");
             drawPlayerHand(canvas);
+            Log.d(TAG, "can draw playername");
             drawCurrentPlayerName(canvas);
+            Log.d(TAG, "can draw other hands");
             drawOtherPlayerHands(canvas);
-
+            Log.d(TAG, "clear");
 
             if (cardSelected) {
                 canvas.drawRect(placeCardRect, placeCardPaint);
             }
+            Log.d(TAG, "can finish it");
 
         }
 
@@ -608,16 +684,15 @@ public class HeartsActivity extends Activity {
 
                 case MotionEvent.ACTION_DOWN: {
 
-
+                    if (gameOver) {
+                        break;
+                    }
                     if (deckIsFinished) {
-                        if (gameOver) {
-
-                        }
-                        else if (waitForTrickDrawing) {
+                        if (waitForTrickDrawing) {
                             break;
                         }
                         if (roundResultsDisplayed) {
-                            Log.d(TAG,"takes round results path");
+                            //Log.d(TAG,"takes round results path");
                             initializeNewDeck();
                             invalidate();
                         }
@@ -627,7 +702,7 @@ public class HeartsActivity extends Activity {
 
                     }
                     else {
-                        Log.d(TAG,"takes card click path");
+                        //Log.d(TAG,"takes card click path");
                         findCurrentCardClicked();
                     }
                    break;
@@ -674,7 +749,7 @@ public class HeartsActivity extends Activity {
 
         public void drawCurrentPlayerName(Canvas canvas) {
             String name= currentPlayer.name;
-            String score = ""+currentPlayer.roundScore;
+            String score = ""+currentPlayer.calculateRoundScore();
 
             canvas.drawText(name, 10, screenHeight/4, textPaint);
             canvas.drawText(score,10,(screenHeight/4)+textSize,textPaint);
@@ -683,7 +758,7 @@ public class HeartsActivity extends Activity {
 
         public void displayTrickWinner(Canvas canvas) {
             String winner = HeartsTrick.playerThatWonLastTrick.name;
-            canvas.drawText(winner + " wins the trick",10,screenHeight-textSize-10, textPaint);
+            canvas.drawText(winner + " wins the trick",10,middleY, textPaint);
 
         }
 
@@ -745,8 +820,10 @@ public class HeartsActivity extends Activity {
         }
 
         public void drawOtherPlayerHands(Canvas canvas) {
+            Log.d(TAG,"finding other player seats");
 
             findWhereOtherPlayersAreSitting();
+            Log.d(TAG, "Bitmaps yo");
 
             canvas.drawBitmap(cardBackBitmap, otPlayer1Rect.left, otPlayer1Rect.top, cardPaint);
 
@@ -764,7 +841,7 @@ public class HeartsActivity extends Activity {
             }
         }
 
-        public void drawPlayerScores(Canvas canvas) {
+        public void drawRoundScores(Canvas canvas) {
             int xCoordinate = 10;
             int yCoordinate =10;
             int lowerYCoordinate = middleY;
@@ -781,16 +858,21 @@ public class HeartsActivity extends Activity {
                 yCoordinate+=textSize;
                 canvas.drawText(player.name + " round == " + player.roundScore, xCoordinate, yCoordinate, textPaint);
             }
+        }
+
+        public void drawTotalScores(Canvas canvas) {
+            int xCoordinate =10;
+            int yCoordinate =middleY;
+
             players =playerQueue.sortByTotalScore(players);
 
-            yCoordinate+=textSize*2;
+            yCoordinate+=textSize;
             for (Player player: players) {
                 yCoordinate+=textSize;
-                //player.addRoundToTotalScore();
                 canvas.drawText(player.name + " total = " + player.totalScore, xCoordinate,yCoordinate, textPaint);
 
             }
-            canvas.drawText("Tap to continue", xCoordinate, screenHeight - (cardHeight / 2), textPaint);
+
 
 
 
@@ -798,9 +880,12 @@ public class HeartsActivity extends Activity {
 
         public void drawEndGame(Canvas canvas) {
             gameOver = true;
+            winner = players.get(0);
             canvas.drawColor(0xFFF44336);
             canvas.drawText("Game Over \n" + winner.name + " wins", 10, middleY, textPaint);
-            drawPlayerScores(canvas);
+            players = playerQueue.clearPlayerWonCards(players);
+            drawTotalScores(canvas);
+            canvas.drawText("Press back to escape",10,screenHeight- (cardHeight/2),textPaint);
 
         }
 

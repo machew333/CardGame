@@ -1,5 +1,7 @@
 package com.edge.cardgame;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -45,16 +47,28 @@ public class PlayerQueue {
         players = orderedPlayerList;
 
     }
+    public void setPlayers(ArrayList<Player> players) {
+        this.players = players;
+    }
 
     public ArrayList<Player> reorderQueue(Player currentPlayer) {
         ArrayList<Player> reorderedQueue = new ArrayList<Player>();
+        Log.d(TAG, "sortBy ordernumber");
         sortByOrderNumber();
+        int splitIndex = 0;
 
-        int splitIndex = players.indexOf(currentPlayer);
+        for (Player player: players) {
+            if (player.name.equals(currentPlayer.name)) {
+                splitIndex= players.indexOf(player);
+            }
+        }
+
         int endIndex = players.size();
 
-        reorderedQueue.addAll(players.subList(splitIndex,endIndex));
+        Log.d(TAG,"Split index = "+splitIndex);
+        reorderedQueue.addAll(players.subList(splitIndex, endIndex));
         reorderedQueue.addAll(players.subList(0,splitIndex));
+        Log.d(TAG, "reorderQueue: place");
 
         this.players = reorderedQueue;
         return reorderedQueue;
@@ -102,6 +116,7 @@ public class PlayerQueue {
     }
 
     public ArrayList<Player> sortByTotalScore(ArrayList<Player> players) {
+
         ArrayList<Player> copyList = (ArrayList<Player>) players.clone();
         ArrayList<Integer> scoreList = new ArrayList<Integer>();
         ArrayList<Player> sortedPlayerList = new ArrayList<Player>();
@@ -128,7 +143,9 @@ public class PlayerQueue {
     public ArrayList<Player> clearPlayerWonCards(ArrayList<Player> players) {
         for (Player player: players) {
             player.clearCardsWon();
+            player.roundScore =0;
         }
+        this.players = players;
         return players;
     }
 
@@ -143,9 +160,19 @@ public class PlayerQueue {
         //Clears cards won so calculating round score again results in 0.
         for (Player player: players) {
             player.addRoundToTotalScore();
+            player.clearCardsWon();
         }
-        players = clearPlayerWonCards(players);
         return players;
+    }
+
+    public boolean checkIfGameOver(ArrayList<Player> players, int endScore) {
+        for (Player player: players) {
+            if (player.totalScore >= endScore) {
+                return true;
+            }
+        }
+        return false;
+
     }
 
 

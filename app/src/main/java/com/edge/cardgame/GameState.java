@@ -8,23 +8,48 @@ import java.util.ArrayList;
 public class GameState {
 
     String title;
-    String playerTurn;
+    Player currentPlayer;
     ArrayList<Player> playerStates;
     HeartsTrick currentTrick;
     int playerCount;
     int tricksPlayed;
+    PlayerQueue playerQueue;
 
     public GameState() {
         tricksPlayed=0;
     }
 
-    public void setGameState(String title,String playerTurn, ArrayList<Player> playerStates, HeartsTrick currentTrick,int tricksPlayed) {
+    public String getTitle() {
+        return title;
+    }
+
+    public Player getCurrentPlayer() {
+        return currentPlayer;
+    }
+
+    public ArrayList<Player> getPlayerStates() {
+        return playerStates;
+    }
+
+    public HeartsTrick getCurrentTrick() {
+        return currentTrick;
+    }
+
+    public int getPlayerCount() {
+        return playerCount;
+    }
+    public PlayerQueue getPlayerQueue() {
+        return playerQueue;
+    }
+
+
+    public void setGameState(String title,Player currentPlayer, ArrayList<Player> playerStates, HeartsTrick currentTrick, PlayerQueue playerQueue) {
         this.title = title;
-        this.playerTurn = playerTurn;
+        this.currentPlayer = currentPlayer;
         this.playerStates = playerStates;
         this.currentTrick = currentTrick;
         this.playerCount = playerStates.size();
-        this.tricksPlayed = tricksPlayed;
     }
+
 
 }
