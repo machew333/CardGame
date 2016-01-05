@@ -14,6 +14,8 @@ public class PlayerQueue {
     Player firstPlayer;
     ArrayList<Player> standardPlayerList = new ArrayList<Player>();
 
+    public String currentSort = "noSort";
+
 
     public PlayerQueue (ArrayList<Player> players) {
         this.players=players;
@@ -27,6 +29,7 @@ public class PlayerQueue {
     public ArrayList<Player> getPlayers() {
         return this.players;
     }
+
     public void setFirstPlayer(Player player) {
         this.firstPlayer= player;
     }
@@ -47,11 +50,17 @@ public class PlayerQueue {
         players = orderedPlayerList;
 
     }
+
     public void setPlayers(ArrayList<Player> players) {
         this.players = players;
     }
 
-    public ArrayList<Player> reorderQueue(Player currentPlayer) {
+    public Player getNextPlayer(Player currentPlayer) {
+        sortByOrderNumber(currentPlayer);
+        return players.get(1);
+    }
+
+    public ArrayList<Player> sortByOrderNumber(Player currentPlayer) {
         ArrayList<Player> reorderedQueue = new ArrayList<Player>();
         Log.d(TAG, "sortBy ordernumber");
         sortByOrderNumber();
@@ -68,16 +77,14 @@ public class PlayerQueue {
         Log.d(TAG,"Split index = "+splitIndex);
         reorderedQueue.addAll(players.subList(splitIndex, endIndex));
         reorderedQueue.addAll(players.subList(0,splitIndex));
-        Log.d(TAG, "reorderQueue: place");
+        Log.d(TAG, "sortByOrderNumber: place");
 
+        currentSort = "byOrderNumber";
         this.players = reorderedQueue;
         return reorderedQueue;
     }
 
-    public Player getNextPlayer(Player currentPlayer) {
-        reorderQueue(currentPlayer);
-        return players.get(1);
-    }
+
 
     public ArrayList<Player> sortByRoundScore(ArrayList<Player> players) {
         //This uses player.getRoundScore() so that if the cards get cleared then it still works as expected.
@@ -112,6 +119,7 @@ public class PlayerQueue {
                 }
             }
         }
+        currentSort = "byRoundScore";
         return sortedPlayerList;
     }
 
@@ -136,18 +144,12 @@ public class PlayerQueue {
                 }
             }
         }
+        currentSort = "byTotalScore";
         return sortedPlayerList;
 
     }
 
-    public ArrayList<Player> clearPlayerWonCards(ArrayList<Player> players) {
-        for (Player player: players) {
-            player.clearCardsWon();
-            player.roundScore =0;
-        }
-        this.players = players;
-        return players;
-    }
+
 
     public ArrayList<Player> calculateRoundScores(ArrayList<Player> players) {
         for (Player player:players) {
@@ -165,9 +167,22 @@ public class PlayerQueue {
         return players;
     }
 
+
+
+    public ArrayList<Player> clearPlayerWonCards(ArrayList<Player> players) {
+        for (Player player: players) {
+            player.clearCardsWon();
+            player.roundScore =0;
+        }
+        this.players = players;
+        return players;
+    }
+
     public boolean checkIfGameOver(ArrayList<Player> players, int endScore) {
         for (Player player: players) {
-            if (player.totalScore >= endScore) {
+            int total = player.calculateRoundScore() + player.totalScore;
+
+            if (total >= endScore) {
                 return true;
             }
         }

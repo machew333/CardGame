@@ -131,21 +131,10 @@ public class HeartsTrick {
                         possibleMoves.add(card);
                         break;
                     }
-
                 }
-
             }
             else {
                 for (Card c: currentPlayer.hand) {
-
-                    if (HeartsTrick.trickCount==1) {
-                        //Can't play value cards
-                        if (c.getHeartsScore() ==0) {
-                            //Log.d(TAG,"card = "+card.title);
-                            possibleMoves.add(c);
-                        }
-                    }
-                    else {
                         if (c.suitValue ==2) {
                             if (heartsIsBroken) {
                                 possibleMoves.add(c);
@@ -154,13 +143,10 @@ public class HeartsTrick {
                         else {
                             possibleMoves.add(c);
                         }
-                    }
-
-
-
                 }
             }
         }
+
         else {
 
             for (Card card: currentPlayer.hand) {
@@ -170,8 +156,21 @@ public class HeartsTrick {
             }
         }
 
+
         if (possibleMoves.isEmpty()) {
-            possibleMoves = currentPlayer.hand;
+            if (HeartsTrick.trickCount==1) {
+                for (Card c: currentPlayer.hand) {
+                    //Can't play value cards
+                    if (c.getHeartsScore() ==0) {
+                        //Log.d(TAG,"card = "+card.title);
+                        possibleMoves.add(c);
+                    }
+                }
+            }
+            else {
+                possibleMoves = currentPlayer.hand;
+            }
+
         }
         currentPlayer.possibleMoves = possibleMoves;
         return possibleMoves;

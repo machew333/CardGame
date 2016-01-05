@@ -2,7 +2,6 @@ package com.edge.cardgame;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,7 +17,6 @@ import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.LinearLayout;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -29,48 +27,57 @@ import java.util.Map;
 
 public class HeartsActivity extends Activity {
 
-    protected String TAG = "hepMe";
+    //Initializations ---------------------------------------------------------------
+    String TAG = "hepMe";
 
-    public GameState gameState;
+    GameState gameState;
 
     TableView tableView;
-    public Map<String,Bitmap> bitmapMap = new HashMap<String,Bitmap>();
 
 
-    Deck heartsDeck;
-    LinearLayout linLay;
-    Player john;
-    Player elroy;
-    Player jeff;
-    Player matt;
-
-    ArrayList<Player> players = new ArrayList<Player>();
-    PlayerQueue playerQueue = new PlayerQueue(players);
-
-    int playerCount = 0;
-
+    //Display stuff
     int screenHeight, screenWidth, cardWidth, cardHeight;
     int middleX, middleY;
     int halfCardWidth,halfCardHeight;
     int textSize;
-    double cardOverlapFraction;
-    public Rect placeCardRect;
-    public Region placeCardRegion = new Region();
+    double cardOverlapFraction; //what fraction of a whole card the cards overlap by
+    Rect placeCardRect;  //where the player needs to tap to place a card
+    Region placeCardRegion = new Region();
 
-    int touchedX,touchedY;
+    Rect otPlayer1Rect,otPlayer2Rect,otPlayer3Rect, otPlayer4Rect, otPlayer5Rect; //the places the other players are
 
+    int touchedX,touchedY;//where the player touches
+
+    //Pictures of cards
     Bitmap D2Bitmap, D3Bitmap, D4Bitmap, D5Bitmap, D6Bitmap, D7Bitmap, D8Bitmap, D9Bitmap, D10Bitmap, DJBitmap, DQBitmap, DKBitmap, DABitmap;
     Bitmap C2Bitmap, C3Bitmap, C4Bitmap, C5Bitmap, C6Bitmap, C7Bitmap, C8Bitmap, C9Bitmap, C10Bitmap, CJBitmap, CQBitmap, CKBitmap, CABitmap;
     Bitmap S2Bitmap, S3Bitmap, S4Bitmap, S5Bitmap, S6Bitmap, S7Bitmap, S8Bitmap, S9Bitmap, S10Bitmap, SJBitmap, SQBitmap, SKBitmap, SABitmap;
     Bitmap H2Bitmap, H3Bitmap, H4Bitmap, H5Bitmap, H6Bitmap, H7Bitmap, H8Bitmap, H9Bitmap, H10Bitmap, HJBitmap, HQBitmap, HKBitmap, HABitmap;
     Bitmap cardBackBitmap;
 
+    //To easily access the bitmaps
+    Map<String,Bitmap> bitmapMap = new HashMap<String,Bitmap>();
+
     double fractionOfScreenWithCards = .95;
     double startingPlaceOfCards = (1-fractionOfScreenWithCards)/2;
+
+    //Game Class Stuff
+    Deck heartsDeck;
 
     Player currentPlayer,winner;
 
     HeartsTrick currentTrick;
+
+    ArrayList<Player> players = new ArrayList<Player>();
+    PlayerQueue playerQueue = new PlayerQueue(players);
+    int playerCount = 0;
+
+    //Auto-generated players
+    Player john;
+    Player elroy;
+    Player jeff;
+    Player matt;
+
     boolean heartsIsBroken = false;
     boolean cardSelected = false;
     boolean deckIsFinished, roundResultsDisplayed = false;
@@ -78,10 +85,11 @@ public class HeartsActivity extends Activity {
     boolean waitForTrickDrawing = false;
     Card currentCard;
 
-    public Rect otPlayer1Rect,otPlayer2Rect,otPlayer3Rect, otPlayer4Rect, otPlayer5Rect;
-
     public int trickIsOver = 0;
     int endScore = 20;
+    //END OF INITIALIZING ---------------------------------------------------------
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,8 +107,8 @@ public class HeartsActivity extends Activity {
 
         }
         else {
-            loadPlayers();
-            //alternateLoadPlayers();
+            //loadPlayers();
+            alternateLoadPlayers();
             initializeNewDeck();
         }
 
@@ -115,12 +123,10 @@ public class HeartsActivity extends Activity {
     public void onSaveInstanceState(Bundle savedInstanceState) {
         String jsonGameState = saveGameState();
 
-        savedInstanceState.putString("jsonGameState",jsonGameState);
-        Log.d(TAG, "saved State");
+        savedInstanceState.putString("jsonGameState", jsonGameState);
 
         // Always call the superclass so it can save the view hierarchy state
         super.onSaveInstanceState(savedInstanceState);
-        Log.d(TAG, "finish");
     }
 
     public String saveGameState() {
@@ -157,8 +163,10 @@ public class HeartsActivity extends Activity {
         heartsDeck.dealOutAll();
         currentPlayer = heartsDeck.getStartPlayer();
         deckIsFinished =false;
+        heartsIsBroken = false;
         HeartsTrick.resetTrickCount();
         startNewHeartsTrick();
+
     }
 
     public void loadPlayers() {
@@ -210,15 +218,12 @@ public class HeartsActivity extends Activity {
     public void findWhereOtherPlayersAreSitting() {
         playerQueue = new PlayerQueue(players);
 
-        Log.d(TAG,"currentPlayer = "+currentPlayer.name);
-        ArrayList<Player> tempPlayers = playerQueue.reorderQueue(currentPlayer);
-        Log.d(TAG,"temPlayers created");
+        ArrayList<Player> tempPlayers = playerQueue.sortByOrderNumber(currentPlayer);
         players.clear();
         for (Player player: tempPlayers) {
             players.add(player);
         }
         players = (ArrayList<Player>) tempPlayers.clone();
-        Log.d(TAG,"we get this far?");
 
     }
 
@@ -263,40 +268,6 @@ public class HeartsActivity extends Activity {
 
     public void selectNextPlayer() {
         currentPlayer = playerQueue.getNextPlayer(currentPlayer);
-    }
-
-    @Override
-    public void onBackPressed() {
-
-
-        if (gameOver) {
-            gameState = new GameState();
-            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
-            startActivity(intent);
-        }
-        else {
-            new AlertDialog.Builder(this)
-                    .setTitle("Card Game")
-                    .setMessage("End this game?")
-                    .setIcon(R.drawable.ic_launcher)
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-
-                        public void onClick(DialogInterface dialog, int whichButton) {
-                            //do more to end this game safely
-                            Bundle bundle = new Bundle();
-                            bundle.putString("jsonGameState", saveGameState());
-                            onSaveInstanceState(bundle);
-
-                            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
-                            startActivity(intent);
-
-
-                        }
-                    })
-                    .setNegativeButton(android.R.string.no, null).show();
-
-        }
-
     }
 
     public void drainPlayerCards() {
@@ -569,6 +540,41 @@ public class HeartsActivity extends Activity {
 
     }
 
+    @Override
+    public void onBackPressed() {
+
+
+        if (gameOver) {
+            gameState = new GameState();
+            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+            startActivity(intent);
+        }
+        else {
+            new AlertDialog.Builder(this)
+                    .setTitle("Card Game")
+                    .setMessage("End this game?")
+                    .setIcon(R.drawable.ic_launcher)
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                        public void onClick(DialogInterface dialog, int whichButton) {
+                            //do more to end this game safely
+                            Bundle bundle = new Bundle();
+                            bundle.putString("jsonGameState", saveGameState());
+                            onSaveInstanceState(bundle);
+
+                            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+                            startActivity(intent);
+
+
+                        }
+                    })
+                    .setNegativeButton(android.R.string.no, null).show();
+
+        }
+
+    }
+
+
 
 
 
@@ -602,22 +608,17 @@ public class HeartsActivity extends Activity {
             super.onDraw(canvas);
             canvas.drawColor(0xFF4CAF50); //Green
 
-
             if (playerQueue.checkIfGameOver(players, endScore)) {
-                Log.d(TAG,"path finished");
                 drawEndGame(canvas);
             }
             else if (deckIsFinished) {
-                Log.d(TAG,"deckIsFinished ");
                 drawDeckIsFinished(canvas);
             }
 
             else if (trickIsOver>0) {
-                Log.d(TAG,"draw trick over");
                 drawTrickIsOver(canvas);
             }
             else {
-                Log.d(TAG,"drawnormal");
                 drawNormalGameplay(canvas);
             }
         }
@@ -643,8 +644,6 @@ public class HeartsActivity extends Activity {
             drawCurrentTrick(canvas);
             displayTrickWinner(canvas);
             if (trickIsOver ==1) {
-                //Log.d(TAG, "new Hearts trick");
-
 
                 startNewHeartsTrick();
                 delayDisplay(1000);
@@ -658,20 +657,14 @@ public class HeartsActivity extends Activity {
 
         public void drawNormalGameplay(Canvas canvas) {
             canvas.drawColor(0xFF4CAF50); //Green
-            Log.d(TAG, "can draw trick");
             drawCurrentTrick(canvas);
-            Log.d(TAG, "can draw hand");
             drawPlayerHand(canvas);
-            Log.d(TAG, "can draw playername");
             drawCurrentPlayerName(canvas);
-            Log.d(TAG, "can draw other hands");
             drawOtherPlayerHands(canvas);
-            Log.d(TAG, "clear");
 
             if (cardSelected) {
                 canvas.drawRect(placeCardRect, placeCardPaint);
             }
-            Log.d(TAG, "can finish it");
 
         }
 
@@ -692,7 +685,6 @@ public class HeartsActivity extends Activity {
                             break;
                         }
                         if (roundResultsDisplayed) {
-                            //Log.d(TAG,"takes round results path");
                             initializeNewDeck();
                             invalidate();
                         }
@@ -702,7 +694,6 @@ public class HeartsActivity extends Activity {
 
                     }
                     else {
-                        //Log.d(TAG,"takes card click path");
                         findCurrentCardClicked();
                     }
                    break;
@@ -820,10 +811,8 @@ public class HeartsActivity extends Activity {
         }
 
         public void drawOtherPlayerHands(Canvas canvas) {
-            Log.d(TAG,"finding other player seats");
 
             findWhereOtherPlayersAreSitting();
-            Log.d(TAG, "Bitmaps yo");
 
             canvas.drawBitmap(cardBackBitmap, otPlayer1Rect.left, otPlayer1Rect.top, cardPaint);
 
@@ -880,6 +869,7 @@ public class HeartsActivity extends Activity {
 
         public void drawEndGame(Canvas canvas) {
             gameOver = true;
+            players = playerQueue.sortByTotalScore(players);
             winner = players.get(0);
             canvas.drawColor(0xFFF44336);
             canvas.drawText("Game Over \n" + winner.name + " wins", 10, middleY, textPaint);
@@ -900,7 +890,7 @@ public class HeartsActivity extends Activity {
                 }
 
                 if (!deckIsFinished) {
-                    drainPlayerCards();
+                    //drainPlayerCards();
                 }
 
                 currentTrick = new HeartsTrick(players);
